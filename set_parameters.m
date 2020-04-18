@@ -35,8 +35,8 @@ z_qso_training_max_cut = 3.5;                 % roughly 95% of training data occ
 min_num_pixels = 400;                         % minimum number of non-masked pixels
 
 % normalization parameters
-normalization_min_lambda = 1325;              % range of rest wavelengths to use   Å
-normalization_max_lambda = 1390;              %   for flux normalization
+normalization_min_lambda = 1650;              % range of rest wavelengths to use   Å
+normalization_max_lambda = 1800;              %   for flux normalization
 
 % null model parameters
 min_lambda         =  910;                    % range of rest wavelengths to       Å
