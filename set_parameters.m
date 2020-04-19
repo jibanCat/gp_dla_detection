@@ -43,7 +43,7 @@ min_lambda         =  910;                    % range of rest wavelengths to    
 max_lambda         = 1600;                    %   model
 dlambda            = 0.25;                    % separation of wavelength grid      Å
 k                  = 20;                      % rank of non-diagonal contribution
-max_noise_variance = 1^2;                     % maximum pixel noise allowed during model training
+max_noise_variance = 3^2;                     % maximum pixel noise allowed during model training
 
 % optimization parameters
 % Apr 10: change to optimal values in multi-DLA paper
