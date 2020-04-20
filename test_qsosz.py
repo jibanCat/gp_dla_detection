@@ -24,7 +24,7 @@ plt.show()
 nspec = 15
 
 # this plots P(M|D) versus z_samples
-qsos.plot_z_sample_posteriors(nspec, dla_samples=False)
+qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
 plt.show()
 
 # Plot the spectra with this_mu, using MAP z estimate
@@ -43,13 +43,13 @@ for nspec in np.where(index)[0]:
     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
     # saving plots: z_samples versus poseteriors
-    qsos.plot_z_sample_posteriors(nspec, dla_samples=False)
+    qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
     plt.savefig("{}_posterior_zqso_samples_delta_z_{}.pdf".format(
             qsos.thing_ids[nspec], delta_z),
             dpi=150, format='pdf')
-    # plt.close()
-    # plt.clf()
-    plt.show()
+    plt.close()
+    plt.clf()
+    # plt.show()
 
     # saving plots: MAP estimate model
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
@@ -58,9 +58,9 @@ for nspec in np.where(index)[0]:
     make_zqso_plots.save_figure(
         "{}_this_mu_delta_z_{}_ZMAP".format(
             qsos.thing_ids[nspec], delta_z))
-    # plt.close()
-    # plt.clf()
-    plt.show()
+    plt.close()
+    plt.clf()
+    # plt.show()
 
     # saving plots: True QSO rest-frame
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
@@ -69,9 +69,9 @@ for nspec in np.where(index)[0]:
     make_zqso_plots.save_figure(
         "{}_this_mu_delta_z_{}_ZTrue".format(
             qsos.thing_ids[nspec], delta_z))
-    # plt.close()
-    # plt.clf()
-    plt.show()
+    plt.close()
+    plt.clf()
+    # plt.show()
 
 # inspect the this_wavelength due to the normalisation is weird
 this_wavelengths    = qsos.find_this_wavelengths(nspec)

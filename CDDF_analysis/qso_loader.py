@@ -21,6 +21,7 @@ import h5py
 import numpy as np 
 from scipy import integrate
 from scipy.special import logsumexp
+from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 from .set_parameters import *
 from .calc_cddf import HubbleByH0, path_length_int
@@ -1382,8 +1383,14 @@ class QSOLoaderZ(QSOLoader):
         plot the z_samples versus sample posteriors
         '''
         # loading from files to save memory
-        this_sample_log_posteriors_no_dla = self.sample_log_posteriors_no_dla[:, nspec]
-        this_sample_log_posteriors_dla    = self.sample_log_posteriors_dla[:, nspec]
+        nspec_nan = np.where(~self.nan_inds)[0][nspec]
+        this_sample_log_posteriors_no_dla = self.sample_log_posteriors_no_dla[:, nspec_nan]
+        this_sample_log_posteriors_dla    = self.sample_log_posteriors_dla[:, nspec_nan]
+
+        assert self.processed_file['z_true'][0, nspec_nan] == self.z_true[nspec]
+
+        this_sample_log_posteriors = logsumexp([
+            this_sample_log_posteriors_no_dla, this_sample_log_posteriors_dla], axis=0)
 
         make_fig()
 
@@ -1394,8 +1401,8 @@ class QSOLoaderZ(QSOLoader):
         
         if dla_samples:
             plt.scatter(self.offset_samples_qso,
-                this_sample_log_posteriors_dla,
-                color="C1", label="P(DLA | D)", alpha=0.5,
+                this_sample_log_posteriors,
+                color="red", label="P(DLA + ¬DLA | D)", alpha=0.5,
                 rasterized=True)
 
         # plot verticle lines corresponding to metal lines miss fitted lya
@@ -1473,11 +1480,41 @@ class QSOLoaderZ(QSOLoader):
 
         # count the effective optical depth from members in Lyman series
         scale_factor = self.total_scale_factor(
-            self.GP.tau_0_kim, self.GP.beta_kim, self.z_qsos[nspec], 
+            self.GP.tau_0_kim, self.GP.beta_kim, z_qso, 
             self.GP.rest_wavelengths, num_lines=num_forest_lines)
-        
+
+        # construct the uncertainty, diag(K) + Omega + V
+        # build covariance matrix
+        v_interpolator = interp1d(this_rest_wavelengths, this_noise_variance)
+
+        # only take noise in between observed lambda
+        ind =  (this_rest_wavelengths.min() <= rest_wavelengths) & (
+                this_rest_wavelengths.max() >= rest_wavelengths)
+
+        this_v = v_interpolator(rest_wavelengths[ind])
+
+        this_omega2 = np.exp( 2 * self.GP.log_omega )
+
+        # scaling factor in the omega2
+        noise_scale_factor = self.total_scale_factor(
+            np.exp(self.GP.log_tau_0), np.exp(self.GP.log_beta), z_qso,
+            self.GP.rest_wavelengths, num_lines=num_forest_lines)
+        noise_scale_factor = 1 - noise_scale_factor + np.exp(self.GP.log_c_0)
+
+        this_omega2 = this_omega2 * noise_scale_factor**2
+
+        # now we also consider the suppression in the noise
+        this_M = self.GP.M
         if suppressed:
-            this_mu = this_mu * scale_factor
+            this_mu     = this_mu     * scale_factor
+            this_M      = this_M      * scale_factor[:, None]
+            this_omega2 = this_omega2 * scale_factor**2.
+
+        # you get only diag since there's no clear way to plot covariance in the plot
+        K      = np.matmul(this_M , this_M.T )
+        this_k = np.diag(K)
+
+        this_error = this_omega2[ind] + this_k[ind] + this_v
 
         # plt.figure(figsize=(16, 5))
         if new_fig:
@@ -1487,6 +1524,9 @@ class QSOLoaderZ(QSOLoader):
         plt.plot(rest_wavelengths, this_mu, 
             label=label + r"$\mathcal{M}$"+r" DLA({n})".format(n=0) + ": {:.3g}".format(self.p_no_dlas[nspec]), 
             color=color)
+
+        plt.fill_between(rest_wavelengths[ind],
+            this_mu[ind] - 2*this_error, this_mu[ind] + 2*this_error, alpha=0.8, color="orange")
 
         plt.xlabel(r"rest-wavelengths $\lambda_{\mathrm{rest}}$ $\AA$")
         plt.ylabel(r"normalised flux")
