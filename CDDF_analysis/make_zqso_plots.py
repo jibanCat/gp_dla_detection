@@ -28,7 +28,7 @@ def generate_qsos(base_directory="", release="dr12q",
     catalogue_file = os.path.join(
         base_directory, processed_directory(release), "catalog.mat")
     learned_file   = os.path.join(
-        base_directory, processed_directory(release), "learned_qso_model_dr9q_minus_concordance.mat")
+        base_directory, processed_directory(release), "learned_qso_model_dr9q_minus_concordance_1200_1300_9.mat")
     sample_file    = os.path.join(
         base_directory, processed_directory(release), "dla_samples.mat")
 
