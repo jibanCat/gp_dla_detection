@@ -1208,8 +1208,8 @@ class QSOLoaderZ(QSOLoader):
     A specific QSOLoader for Z estimation
     '''
     # include the normaliser since it is not in the processed file
-    normalization_min_lambda = 1325                 # range of rest wavelengths to use   Å
-    normalization_max_lambda = 1390                 #   for flux normalization
+    normalization_min_lambda = 1200                 # range of rest wavelengths to use   Å
+    normalization_max_lambda = 1300                 #   for flux normalization
 
 
     def __init__(self, preloaded_file="preloaded_qsos.mat", catalogue_file="catalog.mat", 

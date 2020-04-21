@@ -15,31 +15,32 @@ delta_z = 1
 # generate QSOLoader insrance
 qsos = make_zqso_plots.generate_qsos()
 
-# z_map versus z_true
-index = qsos.plot_z_map(delta_z=delta_z)
-plt.show()
+# # z_map versus z_true
+# index = qsos.plot_z_map(delta_z=delta_z)
+# plt.show()
 
-# plot specific example: this example shows -inf posteriors
-# at the true zQSO parameter space
-nspec = 15
+# # plot specific example: this example shows -inf posteriors
+# # at the true zQSO parameter space
+# nspec = 15
 
-# this plots P(M|D) versus z_samples
-qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
-plt.show()
+# # this plots P(M|D) versus z_samples
+# qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
+# plt.show()
 
-# Plot the spectra with this_mu, using MAP z estimate
-qsos.plot_this_mu(nspec=nspec, suppressed=True, 
-    num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
-plt.ylim(-1, 5)
-plt.show()
+# # Plot the spectra with this_mu, using MAP z estimate
+# qsos.plot_this_mu(nspec=nspec, suppressed=True, 
+#     num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
+# plt.ylim(-1, 5)
+# plt.show()
 
-# Plot the spectra with this_mu, using True zQSO
-qsos.plot_this_mu(nspec=nspec, suppressed=True, 
-    num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec])
-plt.ylim(-1, 5)
-plt.show()
+# # Plot the spectra with this_mu, using True zQSO
+# qsos.plot_this_mu(nspec=nspec, suppressed=True, 
+#     num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec])
+# plt.ylim(-1, 5)
+# plt.show()
 
-for nspec in np.where(index)[0]:
+# for nspec in np.where(index)[0]:
+for nspec in range(len(qsos.z_qsos)):
     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
     # saving plots: z_samples versus poseteriors

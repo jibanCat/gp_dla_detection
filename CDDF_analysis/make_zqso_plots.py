@@ -24,7 +24,7 @@ def generate_qsos(base_directory="", release="dr12q",
     preloaded_file = os.path.join( 
         base_directory, processed_directory(release), "preloaded_qsos.mat")
     processed_file  = os.path.join(
-        base_directory, processed_directory(release), "processed_qsos_dr12q-100_1-1001.mat" )
+        base_directory, processed_directory(release), "processed_qsos_dr12q-100_1-1001-norm-1200-1300.mat" )
     catalogue_file = os.path.join(
         base_directory, processed_directory(release), "catalog.mat")
     learned_file   = os.path.join(
