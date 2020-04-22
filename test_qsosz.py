@@ -4,13 +4,15 @@ scripts to plot QSOLoaderZ
 import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
-from CDDF_analysis.qso_loader import QSOLoaderZ
+from CDDF_analysis.qso_loader_z import QSOLoaderZ
 from CDDF_analysis import make_zqso_plots
 from CDDF_analysis.set_parameters import *
 
 matplotlib.use('TkAgg')
 
 delta_z = 0.5
+normalization_mins = [1156, 1509]
+normalization_maxs = [1276, 1589]
 
 # generate QSOLoader insrance
 qsos = make_zqso_plots.generate_qsos()
@@ -30,13 +32,15 @@ plt.show()
 
 # Plot the spectra with this_mu, using MAP z estimate
 qsos.plot_this_mu(nspec=nspec, suppressed=True, 
-    num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
+    num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec],
+    normalization_mins = normalization_mins, normalization_maxs = normalization_maxs)
 plt.ylim(-1, 5)
 plt.show()
 
 # Plot the spectra with this_mu, using True zQSO
 qsos.plot_this_mu(nspec=nspec, suppressed=True, 
-    num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec])
+    num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec],
+    normalization_mins = normalization_mins, normalization_maxs = normalization_maxs)
 plt.ylim(-1, 5)
 plt.show()
 
@@ -55,7 +59,8 @@ for nspec in range(len(qsos.z_qsos)):
 
     # saving plots: MAP estimate model
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
-        num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
+        num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec],
+        normalization_mins = normalization_mins, normalization_maxs = normalization_maxs)
     plt.ylim(-1, 5)        
     make_zqso_plots.save_figure(
         "{}_this_mu_delta_z_{}_ZMAP".format(
@@ -66,7 +71,8 @@ for nspec in range(len(qsos.z_qsos)):
 
     # saving plots: True QSO rest-frame
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
-        num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec])
+        num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec],
+        normalization_mins = normalization_mins, normalization_maxs = normalization_maxs)
     plt.ylim(-1, 5)    
     make_zqso_plots.save_figure(
         "{}_this_mu_delta_z_{}_ZTrue".format(
@@ -79,13 +85,6 @@ for nspec in range(len(qsos.z_qsos)):
 this_wavelengths    = qsos.find_this_wavelengths(nspec)
 this_noise_variance = qsos.find_this_noise_variance(nspec)
 this_flux           = qsos.find_this_flux(nspec)
-
-this_rest_wavelengths = this_wavelengths / ( 1 + qsos.z_qsos[nspec] )
-
-ind = ( (this_rest_wavelengths >= qsos.normalization_min_lambda) & 
-    (this_rest_wavelengths <= qsos.normalization_max_lambda))
-
-this_median    = np.nanmedian(this_flux[ind])
 
 # new prior range
 # ( min(this_wavelength)/lya_wavelength - 1, max(this_wavelength)/lya_wavelength - 1)

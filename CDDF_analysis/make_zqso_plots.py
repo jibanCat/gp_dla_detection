@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
 from .set_parameters import *
-from .qso_loader import QSOLoaderZ
+from .qso_loader_z import QSOLoaderZ
 
 # change fontsize
 matplotlib.rcParams.update({'font.size' : 14})
@@ -24,11 +24,11 @@ def generate_qsos(base_directory="", release="dr12q",
     preloaded_file = os.path.join( 
         base_directory, processed_directory(release), "preloaded_qsos.mat")
     processed_file  = os.path.join(
-        base_directory, processed_directory(release), "processed_qsos_dr12q-100_1-1001-norm-1200-1300.mat" )
+        base_directory, processed_directory(release), "processed_qsos_dr12q-100_1-101_norm_1156-1276_1509-1589.mat" )
     catalogue_file = os.path.join(
         base_directory, processed_directory(release), "catalog.mat")
     learned_file   = os.path.join(
-        base_directory, processed_directory(release), "learned_qso_model_dr9q_minus_concordance_1200_1300_9.mat")
+        base_directory, processed_directory(release), "learned_qso_model_dr9q_minus_concordance_1156-1276_1509-1589.mat")
     sample_file    = os.path.join(
         base_directory, processed_directory(release), "dla_samples.mat")
 
