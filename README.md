@@ -127,18 +127,13 @@ nominally DLA-free. Here we select all spectra:
 
 * in DR9
 * not removed by our filtering steps during loading
-* in the DR9 Lyman-alpha forest catalog, and
-* not in the DR9 Lyman-alpha DLA concordance catalog
 
 These particular choices may be accomplished with:
 
     training_release  = 'dr12q';
-    dla_catalog_name = 'dr9q_concordance';
     train_ind = ...
         [' catalog.in_dr9                     & ' ...
-         '(catalog.filter_flags == 0)         & ' ...
-         ' catalog.los_inds(dla_catalog_name) & ' ...
-         '~catalog.dla_inds(dla_catalog_name)'];
+         '(catalog.filter_flags == 0) ' ];
 
 After specifying the spectra to use in `training_release` and
 `train_ind`, we call `learn_qso_model` to learn the model.
@@ -164,9 +159,6 @@ desired:
     max_noise_variance = 1^2;                     % maximum pixel noise allowed during model training
 
     % optimization parameters
-    initial_c     = 0.1;                          % initial guess for c
-    initial_tau_0 = 0.0023;                       % initial guess for τ₀
-    initial_beta  = 3.65;                         % initial guess for β
     minFunc_options =               ...           % optimization options for model fitting
         struct('MaxIter',     4000, ...
                'MaxFunEvals', 8000);
@@ -180,44 +172,14 @@ is:
 The learned qso model is stored in
 `data/[training_release]/processed/learned_qso_model_[training_set_name].mat`.
 
-We also need to specify a set of DLA parameter samples for the DLA
-model. This is handled by the `generate_dla_samples` script.
-
-Relevant parameters in `set_parameters` that can be tweaked if
-desired:
-
-    % DLA model parameters: parameter samples
-    num_dla_samples     = 10000;                  % number of parameter samples
-    alpha               = 0.9;                    % weight of KDE component in mixture
-    uniform_min_log_nhi = 20.0;                   % range of column density samples    [cm⁻²]
-    uniform_max_log_nhi = 23.0;                   % from uniform distribution
-    fit_min_log_nhi     = 20.0;                   % range of column density samples    [cm⁻²]
-    fit_max_log_nhi     = 22.0;                   % from fit to log PDF
-
-When ready, the MATLAB code to generate the DLA model parameter
-samples is:
-
-    training_release  = 'dr12q';
-    generate_dla_samples;
-
 Processing spectra for DLA detection
 ------------------------------------
 
 Finally, we may use our built model to compute the posterior
-probability of containing a DLA along the line of sight as described
+probability of the quasar redshift as described
 in the paper above.
 
-The processing code requires the C helper function `voigt.c` to be
-compiled to compute Voigt profiles quickly from MATLAB. This requires
-the [`libcerf`](http://apps.jcns.fz-juelich.de/doku/sc/libcerf)
-library to be installed. This is available
-from [Homebrew-science](https://github.com/Homebrew/homebrew-science)
-for OS X users. The code for this is:
-
-    % in MATLAB
-    mex voigt.c -lcerf
-
-To perform a DLA search, we must specify a few things first. First, we
+We must specify a few things first. First, we
 must specify which quasar emission model to use; to select the one
 learned above, we may use
 
@@ -228,23 +190,7 @@ learned above, we may use
 (the code will attempt to load the model from a file called
 `data/[training_release]/processed/learned_qso_model_[training_set_name].mat`.)
 
-Next, we must specify which spectra to use to compute the DLA model
-prior Pr(M_DLA). Here we select all spectra that are:
-
-* in DR9
-* in the DR9 Lyman-alpha forest catalog, and
-* not filtered by our filtering steps above.
-
-These choices can be realized with:
-
-    % specify the spectra to use for computing the DLA existence prior
-    dla_catalog_name  = 'dr9q_concordance';
-    prior_ind = ...
-        [' prior_catalog.in_dr9 & ' ...
-         ' prior_catalog.los_inds(dla_catalog_name) & ' ...
-         '(prior_catalog.filter_flags == 0)'];
-
-Next, we must specify which spectra to search for DLAs. Here we use
+Next, we must specify which spectra to process. Here we use
 all DR12Q spectra that were not filtered:
 
     % specify the spectra to process
@@ -252,49 +198,23 @@ all DR12Q spectra that were not filtered:
     test_set_name = 'dr12q';
     test_ind = '(catalog.filter_flags == 0)';
 
-Relevant parameters in `set_parameters` that can be tweaked if
-desired, including function handles specifying the range of z_DLA to
-search:
-
-    % model prior parameters
-    prior_z_qso_increase = kms_to_z(30000);       % use QSOs with z < (z_QSO + x) for prior
-
-    % instrumental broadening parameters
-    width = 3;                                    % width of Gaussian broadening (# pixels)
-    pixel_spacing = 1e-4;                         % wavelength spacing of pixels in dex
-
-    % DLA model parameters: absorber range and model
-    num_lines = 3;                                % number of members of the Lyman series to use
-
-    max_z_cut = kms_to_z(3000);                   % max z_DLA = z_QSO - max_z_cut
-    max_z_dla = @(wavelengths, z_qso) ...         % determines maximum z_DLA to search
-        (max(wavelengths) / lya_wavelength - 1) - max_z_cut;
-
-    min_z_cut = kms_to_z(3000);                   % min z_DLA = z_Ly∞ + min_z_cut
-    min_z_dla = @(wavelengths, z_qso) ...         % determines minimum z_DLA to search
-    max(min(wavelengths) / lya_wavelength - 1,                          ...
-        observed_wavelengths(lyman_limit, z_qso) / lya_wavelength - 1 + ...
-        min_z_cut);
-
 When ready, the selected spectra can be processed with `process_qsos`.
+Relevant parameters in `set_parameters` that can be tweaked if
+desired:
+
+    num_zqso_samples     = 10000;                  % number of parameter samples
+
 This script will write the results in
 `data/[release]/processed_qsos_[test_set_name].mat`.
 
 The complete code for processing the spectra in MATLAB is:
 
-    % produce catalog searching [Lyoo + 3000 km/s, Lya - 3000 km/s]
+    % produce catalog 
     set_parameters;
 
     % specify the learned quasar model to use
     training_release  = 'dr12q';
     training_set_name = 'dr9q_minus_concordance';
-
-    % specify the spectra to use for computing the DLA existence prior
-    dla_catalog_name  = 'dr9q_concordance';
-	prior_ind = ...
-        [' prior_catalog.in_dr9 & '             ...
-         '(prior_catalog.filter_flags == 0) & ' ...
-         ' prior_catalog.los_inds(dla_catalog_name)'];
 
     % specify the spectra to process
     release = 'dr12q';

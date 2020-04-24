@@ -23,65 +23,52 @@ emitted_wavelengths = ...
 observed_wavelengths = ...
     @(emitted_wavelengths,  z) ( emitted_wavelengths * (1 + z));
 
+release = 'dr12q';
+file_loader = @(plate, mjd, fiber_id) ...
+  (read_spec(sprintf('%s/%i/spec-%i-%i-%04i.fits', ...
+    spectra_directory(release),                  ...
+    plate,                                       ...
+    plate,                                       ...
+    mjd,                                         ...
+    fiber_id)));
+
+training_release  = 'dr12q';
+training_set_name = 'dr9q_minus_concordance';
+train_ind = ...
+    [' catalog.in_dr9                     & ' ...
+     '(catalog.filter_flags == 0) ' ];
+
+test_set_name = 'dr12q';
+
 % file loading parameters
-loading_min_lambda = 700;                   % range of rest wavelengths to load  Å
-loading_max_lambda = 2400;                  % This maximum is set so we include CIV.
+loading_min_lambda = lya_wavelength;                % range of rest wavelengths to load  Å
+loading_max_lambda = 5000;                  % This maximum is set so we include CIV.
 % The maximum allowed is set so that even if the peak is redshifted off the end, the
 % quasar still has data in the range
 
 % preprocessing parameters
-z_qso_cut      = 2.15;                        % filter out QSOs with z less than this threshold
-z_qso_training_max_cut = 3.5;                 % roughly 95% of training data occurs before this redshift; assuming for normalization purposes (move to set_parameters when pleased)
-min_num_pixels = 400;                         % minimum number of non-masked pixels
+z_qso_cut      = 0;         % filter out QSOs with z less than this threshold
+z_qso_training_max_cut = 5; % roughly 95% of training data occurs before this redshift; assuming for normalization purposes (move to set_parameters when pleased)
+z_qso_training_min_cut = 1.5; % Ignore these quasars when training
+min_num_pixels = 300;                         % minimum number of non-masked pixels
 
 % normalization parameters
-normalization_min_lambda = 1325;              % range of rest wavelengths to use   Å
-normalization_max_lambda = 1390;              %   for flux normalization
+normalization_min_lambda = lya_wavelength;              % range of rest wavelengths to use   Å
+normalization_max_lambda = lya_wavelength + 500; %   for flux normalization
 
 % null model parameters
-min_lambda         =  910;                    % range of rest wavelengths to       Å
-max_lambda         = 1600;                    %   model
-dlambda            = 0.25;                    % separation of wavelength grid      Å
+min_lambda         = lya_wavelength;                 % range of rest wavelengths to       Å
+max_lambda         = 2840;                 %   model
+dlambda            = 0.25;                 % separation of wavelength grid      Å
 k                  = 20;                      % rank of non-diagonal contribution
-max_noise_variance = 1^2;                     % maximum pixel noise allowed during model training
+max_noise_variance = 2^2;                     % maximum pixel noise allowed during model training
 
 % optimization parameters
-% Apr 10: change to optimal values in multi-DLA paper
-initial_c_0   = 0.3050;                       % initial guess for c₀
-initial_tau_0 = 0.000164;                     % initial guess for τ₀
-initial_beta  = 5.2714;                       % initial guess for β
 minFunc_options =               ...           % optimization options for model fitting
-    struct('MaxIter',     2000, ...
-           'MaxFunEvals', 4000);
+    struct('MaxIter',     4000, ...
+           'MaxFunEvals', 8000);
 
-% DLA model parameters: parameter samples
-num_dla_samples     = 100000;                 % number of parameter samples
-alpha               = 0.9;                    % weight of KDE component in mixture
-uniform_min_log_nhi = 20.0;                   % range of column density samples    [cm⁻²]
-uniform_max_log_nhi = 23.0;                   % from uniform distribution
-fit_min_log_nhi     = 20.0;                   % range of column density samples    [cm⁻²]
-fit_max_log_nhi     = 22.0;                   % from fit to log PDF
-
-% model prior parameters
-prior_z_qso_increase = kms_to_z(30000);       % use QSOs with z < (z_QSO + x) for prior
-
-% instrumental broadening parameters
-width = 3;                                    % width of Gaussian broadening (# pixels)
-pixel_spacing = 1e-4;                         % wavelength spacing of pixels in dex
-
-% DLA model parameters: absorber range and model
-num_lines = 3;                                % number of members of the Lyman series to use
-
-max_z_cut = kms_to_z(3000);                   % max z_DLA = z_QSO - max_z_cut
-max_z_dla = @(wavelengths, z_qso) ...         % determines maximum z_DLA to search
-    min((max(wavelengths) / lya_wavelength - 1) - max_z_cut,...
-    z_qso - max_z_cut);
-
-min_z_cut = kms_to_z(3000);                   % min z_DLA = z_Ly∞ + min_z_cut
-min_z_dla = @(wavelengths, z_qso) ...         % determines minimum z_DLA to search
-    max(min(wavelengths) / lya_wavelength - 1,                          ...
-        observed_wavelengths(lyman_limit, z_qso) / lya_wavelength - 1 + ...
-        min_z_cut);
+num_zqso_samples     = 10000;                  % number of parameter samples
 
 % Lyman-series array: for modelling the forests of Lyman series
 num_forest_lines = 6;
@@ -167,9 +154,6 @@ spectra_directory   = @(release) ...
 
 processed_directory = @(release) ...
     sprintf('%s/%s/processed', base_directory, release);
-
-dla_catalog_directory = @(name) ...
-    sprintf('%s/dla_catalogs/%s/processed', base_directory, name);
 
 % replace with @(varargin) (fprintf(varargin{:})) to show debug statements
 % fprintf_debug = @(varargin) (fprintf(varargin{:}));
