@@ -188,6 +188,23 @@ mu = nanmean(rest_fluxes_div_exp1pz);
 centered_rest_fluxes = bsxfun(@minus, rest_fluxes_div_exp1pz, mu);
 clear('rest_fluxes', 'rest_fluxes_div_exp1pz');
 
+% small fix to the data fit into the pca:
+% make the NaNs to the medians of a given row
+% rememeber not to inject this into the actual
+% joint likelihood maximisation
+pca_centered_rest_flux = centered_rest_fluxes;
+
+[num_quasars, ~] = size(pca_centered_rest_flux);
+
+for i = 1:num_quasars
+  this_pca_cetnered_rest_flux = pca_centered_rest_flux(i, :);
+
+  % assign median value for each row to nan
+  ind = isnan(this_pca_cetnered_rest_flux);
+  
+  pca_centered_rest_flux(i, ind) = nanmedian(this_pca_cetnered_rest_flux);
+end
+
 % get top-k PCA vectors to initialize M
 [coefficients, ~, latent] = ...
     pca(centered_rest_fluxes, ...
