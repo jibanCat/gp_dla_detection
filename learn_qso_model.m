@@ -82,10 +82,8 @@ clear('all_wavelengths', 'all_flux', 'all_noise_variance', 'all_pixel_mask');
 % filter out empty spectra
 % note: if you've done this in preload_qsos then skip these lines
 z_qsos               = z_qsos(~is_empty);
-lya_1pzs             = lya_1pzs(~is_empty, :);
 rest_fluxes          = rest_fluxes(~is_empty, :);
 rest_noise_variances = rest_noise_variances(~is_empty, :);
-all_lyman_1pzs       = all_lyman_1pzs(:, ~is_empty, :);
 
 % update num_quasars in consideration
 num_quasars = numel(z_qsos);
