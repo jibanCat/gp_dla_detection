@@ -61,6 +61,7 @@ M_interpolator = ...
 
 % initialize results
 sample_log_posteriors  = nan(num_quasars, num_zqso_samples);
+z_true                        = nan(num_quasars, 1);
 z_map                         = nan(num_quasars, 1);
 signal_to_noise               = nan(num_quasars, 1);
 
@@ -71,41 +72,107 @@ z_list                   = 1:length(offset_samples_qso);
 fluxes                   = cell(length(z_list), 1);
 rest_wavelengths         = cell(length(z_list), 1);
 
-for quasar_ind = 1:num_quasars %quasar list
+% this is just an array allow you to select a range
+% of quasars to run
+quasar_ind = 1;
+q_ind_start = quasar_ind;
+
+% catch the exceptions
+all_exceptions = false(num_quasars, 1);
+
+for quasar_ind = q_ind_start:num_quasars %quasar list
     tic;
+    quasar_num = qso_ind(quasar_ind);
+    z_true(quasar_ind)   = z_qsos(quasar_num);
+    %computing signal-to-noise ratio
+    this_wavelengths    =    all_wavelengths{quasar_num};
+    this_flux           =           all_flux{quasar_num};
+    this_noise_variance = all_noise_variance{quasar_num};
+    this_pixel_mask     =     all_pixel_mask{quasar_num};
+
+    this_rest_wavelengths = emitted_wavelengths(this_wavelengths, 4.4088); %roughly highest redshift possible (S2N for everything that may be in restframe)
+
+    ind  = this_rest_wavelengths <= max_lambda;
+
+    this_rest_wavelengths = this_rest_wavelengths(ind);
+    this_flux             =             this_flux(ind);
+    this_noise_variance   =   this_noise_variance(ind);
+
+    this_noise_variance(isinf(this_noise_variance)) = .01; %kludge to fix bad data
     
-    this_wavelengths    =    all_wavelengths{quasar_ind};
-    this_flux           =           all_flux{quasar_ind};
-    this_noise_variance = all_noise_variance{quasar_ind};
-    this_pixel_mask     =     all_pixel_mask{quasar_ind};
+    this_pixel_signal_to_noise  = sqrt(this_noise_variance) ./ abs(this_flux);
+
+    % this is before pixel masking; nanmean to avoid possible NaN values
+    signal_to_noise(quasar_ind) = nanmean(this_pixel_signal_to_noise);
+
+    % move these outside the parfor to avoid constantly querying these large arrays
+    this_out_wavelengths    =    all_wavelengths{quasar_num};
+    this_out_flux           =           all_flux{quasar_num};
+    this_out_noise_variance = all_noise_variance{quasar_num};
+    this_out_pixel_mask     =     all_pixel_mask{quasar_num};
+
+    % Test: see if this spec is empty; this error handling line be outside parfor
+    % would avoid running lots of empty spec in parallel workers
+    if all(size(this_out_wavelengths) == [0 0])
+        all_exceptions(quasar_ind, 1) = 1;
+        continue;
+    end
+    
+    parfor i = 1:num_dla_samples       %variant redshift in quasars
+        z_qso = offset_samples_qso(i);
+
+        % keep a copy inside the parfor since we are modifying them
+        this_wavelengths    = this_out_wavelengths;
+        this_flux           = this_out_flux;
+        this_noise_variance = this_out_noise_variance;
+        this_pixel_mask     = this_out_pixel_mask;
         
-    parfor z_list_ind = 1:length(offset_samples_qso) %variant redshift in quasars
-        z_qso = offset_samples_qso(z_list_ind);
-        
-        %interpolate observations
-        max_observed_lambda = observed_wavelengths(max_lambda, z_qso);
-        max_observed_lambda = min(max_observed_lambda, max(this_wavelengths));
-        min_observed_lambda = observed_wavelengths(min_lambda, z_qso);
-        min_observed_lambda = max(min_observed_lambda, min(this_wavelengths));
+        %Cut off observations
+        max_pos_lambda = observed_wavelengths(max_lambda, z_qso);
+        min_pos_lambda = observed_wavelengths(min_lambda, z_qso);
+        max_observed_lambda = min(max_pos_lambda, max(this_wavelengths));
+
+        min_observed_lambda = max(min_pos_lambda, min(this_wavelengths));
+        lambda_observed = (max_observed_lambda - min_observed_lambda);
+
+        ind = (this_wavelengths > min_observed_lambda) & (this_wavelengths < max_observed_lambda);
+        this_flux           = this_flux(ind);
+        this_noise_variance = this_noise_variance(ind);
+        this_wavelengths    = this_wavelengths(ind);
+        this_pixel_mask     = this_pixel_mask(ind);
+
         % convert to QSO rest frame
         this_rest_wavelengths = emitted_wavelengths(this_wavelengths, z_qso);
+
+        %normalizing here
+        ind = (this_rest_wavelengths >= normalization_min_lambda) & ...
+            (this_rest_wavelengths <= normalization_max_lambda);
+
+        this_median         = nanmedian(this_flux(ind));
+        this_flux           = this_flux / this_median;
+        this_noise_variance = this_noise_variance / this_median .^ 2;
         
         ind = (this_rest_wavelengths >= min_lambda) & ...
             (this_rest_wavelengths <= max_lambda);
         
         if (min_observed_lambda > max_observed_lambda) | (nnz(ind) < 150)
             % If we have no data in the observed range, this sample is maximally unlikely.
-            sample_log_posteriors(quasar_ind, z_list_ind) = -1.e50;
+            sample_log_posteriors(quasar_ind, i) = -1.e50;
             continue;
         end
         %ind = ind & (~this_pixel_mask);
         
+        ind = ind & (~this_pixel_mask);
+
+        this_wavelengths      =      this_wavelengths(ind);
         this_rest_wavelengths = this_rest_wavelengths(ind);
-        this_rest_flux             =             this_flux(ind);
-        this_rest_noise_variance   =   this_noise_variance(ind);
+        this_flux             =             this_flux(ind);
+        this_noise_variance   =   this_noise_variance(ind);
+
+        this_noise_variance(isinf(this_noise_variance)) = mean(this_noise_variance); %rare kludge to fix bad data
         
-        fluxes{z_list_ind} = this_rest_flux;
-        rest_wavelengths{z_list_ind} = this_rest_wavelengths;
+        fluxes{i}           = this_flux;
+        rest_wavelengths{i} = this_rest_wavelengths;
         
         % interpolate model onto given wavelengths
         this_mu = mu_interpolator( this_rest_wavelengths);
@@ -115,15 +182,15 @@ for quasar_ind = 1:num_quasars %quasar list
         %all_Ms{z_list_ind} = this_M;
        
         sample_log_priors = 0;
-        
-        sample_log_posteriors(quasar_ind, z_list_ind) = ...
+
+        sample_log_posteriors(quasar_ind, i) = ...
             log_mvnpdf_low_rank(this_rest_flux, this_mu, this_M, this_rest_noise_variance) + sample_log_priors;
         % Correct for incomplete data
         corr = nnz(ind) - length(this_rest_wavelengths);
-        sample_log_posteriors(quasar_ind, z_list_ind) = sample_log_posteriors(quasar_ind, z_list_ind) + corr;
+        sample_log_posteriors(quasar_ind, i) = sample_log_posteriors(quasar_ind, i) + corr;
 
-        fprintf_debug(' ... log p(D | z_QSO)     : %0.2f\n', ...
-            sample_log_posteriors(quasar_ind, z_list_ind));
+        % fprintf_debug(' ... log p(D | z_QSO)     : %0.2f\n', ...
+        %     sample_log_posteriors(quasar_ind, i));
     end
     this_sample_log = sample_log_posteriors(quasar_ind, :);
     
