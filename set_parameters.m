@@ -53,11 +53,11 @@ z_qso_training_min_cut = 1.5; % Ignore these quasars when training
 min_num_pixels = 300;                         % minimum number of non-masked pixels
 
 % normalization parameters
-normalization_min_lambda = lya_wavelength;              % range of rest wavelengths to use   Å
-normalization_max_lambda = lya_wavelength + 500; %   for flux normalization
+normalization_min_lambda = 1200;              % range of rest wavelengths to use   Å
+normalization_max_lambda = 1300;              %   for flux normalization
 
 % null model parameters
-min_lambda         = lya_wavelength;                 % range of rest wavelengths to       Å
+min_lambda         = 1200;                 % range of rest wavelengths to       Å
 max_lambda         = 2840;                 %   model
 dlambda            = 0.25;                 % separation of wavelength grid      Å
 k                  = 20;                      % rank of non-diagonal contribution

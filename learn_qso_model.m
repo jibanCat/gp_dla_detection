@@ -36,11 +36,6 @@ num_rest_pixels = numel(rest_wavelengths);
 rest_fluxes          = nan(num_quasars, num_rest_pixels);
 rest_noise_variances = nan(num_quasars, num_rest_pixels);
 
-% the preload_qsos should fliter out empty spectra;
-% this line is to prevent there is any empty spectra
-% in preloaded_qsos.mat for some reason
-is_empty             = false(num_quasars, 1);
-
 % interpolate quasars onto chosen rest wavelength grid
 for i = 1:num_quasars
   z_qso = z_qsos(i);
@@ -58,17 +53,8 @@ for i = 1:num_quasars
   rest_fluxes(i, :) = ...
       interp1(this_rest_wavelengths, this_flux,           rest_wavelengths);
 
-  %normalizing here
-  ind = (this_rest_wavelengths >= normalization_min_lambda) & ...
-        (this_rest_wavelengths <= normalization_max_lambda) & ...
-        (~this_pixel_mask);
-
-  this_median = nanmedian(this_flux(ind));
-  rest_fluxes(i, :) = rest_fluxes(i, :) / this_median;
-
   rest_noise_variances(i, :) = ...
       interp1(this_rest_wavelengths, this_noise_variance, rest_wavelengths);
-  rest_noise_variances(i, :) = rest_noise_variances(i, :) / this_median .^ 2;
 end
 clear('all_wavelengths', 'all_flux', 'all_noise_variance', 'all_pixel_mask');
 
@@ -83,61 +69,22 @@ ind = (rest_noise_variances > max_noise_variance);
 fprintf("Masking %g of pixels\n", nnz(ind)*1./numel(ind));
 rest_fluxes(ind)          = nan;
 rest_noise_variances(ind) = nan;
-for i = 1:num_quasars
-  for j = 1:num_forest_lines
-    all_lyman_1pzs(j, i, ind(i, :))  = nan;
-  end
-end
-
-% reverse the rest_fluxes back to the fluxes before encountering Lyα forest
-prev_tau_0 = 0.0023; % Kim et al. (2007) priors
-prev_beta  = 3.65;
-
-rest_fluxes_div_exp1pz      = nan(num_quasars, num_rest_pixels);
-rest_noise_variances_exp1pz = nan(num_quasars, num_rest_pixels);
-
-for i = 1:num_quasars
-  % compute the total optical depth from all Lyman series members
-  % Apr 8: not using NaN here anymore due to range beyond Lya will all be NaNs
-  total_optical_depth = zeros(num_forest_lines, num_rest_pixels);
-
-  for j = 1:num_forest_lines
-    % calculate the oscillator strengths for Lyman series
-    this_tau_0 = prev_tau_0 * ...
-      all_oscillator_strengths(j)   / lya_oscillator_strength * ...
-      all_transition_wavelengths(j) / lya_wavelength;
-    
-    % remove the leading dimension
-    this_lyman_1pzs = squeeze(all_lyman_1pzs(j, i, :))'; % (1, num_rest_pixels)
-
-    total_optical_depth(j, :) = this_tau_0 .* (this_lyman_1pzs.^prev_beta);
-  end
-
-  % Apr 8: using zeros instead so not nansum here anymore
-  % beyond lya, absorption fcn shoud be unity
-  lya_absorption = exp(- sum(total_optical_depth, 1) );
-
-  % We have to reverse the effect of Lyα for both mean-flux and observational noise
-  rest_fluxes_div_exp1pz(i, :)      = rest_fluxes(i, :) ./ lya_absorption;
-  rest_noise_variances_exp1pz(i, :) = rest_noise_variances(i, :) ./ (lya_absorption.^2);
-end
-
-clear('all_lyman_1pzs');
 
 % Filter out spectra which have too many NaN pixels
 ind = sum(isnan(rest_fluxes),2) < num_rest_pixels-min_num_pixels;
 fprintf("Filtering %g quasars for NaN\n", length(rest_fluxes) - nnz(ind));
 rest_fluxes = rest_fluxes(ind, :);
 rest_noise_variances = rest_noise_variances(ind,:);
+
 % Check for columns which contain only NaN on either end.
-nancolfrac = sum(isnan(rest_fluxes_div_exp1pz), 1) / nnz(ind);
+nancolfrac = sum(isnan(rest_fluxes),1)/ nnz(ind);
 fprintf("Columns with nan > 0.9: ");
 max(find(nancolfrac > 0.9))
 
 % find empirical mean vector and center data
-mu = nanmean(rest_fluxes_div_exp1pz);
-centered_rest_fluxes = bsxfun(@minus, rest_fluxes_div_exp1pz, mu);
-clear('rest_fluxes', 'rest_fluxes_div_exp1pz');
+mu = nanmean(rest_fluxes);
+centered_rest_fluxes = bsxfun(@minus, rest_fluxes, mu);
+clear('rest_fluxes');
 
 % get top-k PCA vectors to initialize M
 [coefficients, ~, latent] = ...
