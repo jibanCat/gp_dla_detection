@@ -184,7 +184,8 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         sample_log_priors = 0;
 
         sample_log_posteriors(quasar_ind, i) = ...
-            log_mvnpdf_low_rank(this_rest_flux, this_mu, this_M, this_rest_noise_variance) + sample_log_priors;
+            log_mvnpdf_low_rank(this_flux, this_mu, this_M, this_rest_noise_variance) + sample_log_priors;
+
         % Correct for incomplete data
         corr = nnz(ind) - length(this_rest_wavelengths);
         sample_log_posteriors(quasar_ind, i) = sample_log_posteriors(quasar_ind, i) + corr;
