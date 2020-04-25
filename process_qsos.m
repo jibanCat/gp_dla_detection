@@ -118,7 +118,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         continue;
     end
     
-    parfor i = 1:num_dla_samples       %variant redshift in quasars
+    parfor i = 1:num_zqso_samples       %variant redshift in quasars
         z_qso = offset_samples_qso(i);
 
         % keep a copy inside the parfor since we are modifying them
