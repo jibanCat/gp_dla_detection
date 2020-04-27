@@ -1,4 +1,4 @@
-function [coeff, score, latent, tsquared, explained, mu] = pca(x,varargin)
+function [coeff, score, latent, tsquared, explained, mu] = pca_custom(x,varargin)
 %PCA Principal Component Analysis (PCA) on raw data.
 %   COEFF = PCA(X) returns the principal component coefficients for the N
 %   by P data matrix X. Rows of X correspond to observations and columns to
