@@ -10,13 +10,14 @@ from CDDF_analysis.set_parameters import *
 
 matplotlib.use('TkAgg')
 
-delta_z = 1
+delta_z = 0.5
 
 # generate QSOLoader insrance
 qsos = make_zqso_plots.generate_qsos()
 
 # z_map versus z_true
 index = qsos.plot_z_map(delta_z=delta_z)
+make_zqso_plots.save_figure("z_map_vs_z_true_pure-z")
 plt.show()
 
 # plot specific example: this example shows -inf posteriors
@@ -24,7 +25,7 @@ plt.show()
 nspec = 15
 
 # this plots P(M|D) versus z_samples
-qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
+qsos.plot_z_sample_posteriors(nspec, dla_samples=False)
 plt.show()
 
 # Plot the spectra with this_mu, using MAP z estimate
@@ -39,7 +40,8 @@ qsos.plot_this_mu(nspec=nspec, suppressed=True,
 plt.ylim(-1, 5)
 plt.show()
 
-for nspec in np.where(index)[0]:
+# for nspec in np.where(index)[0]:
+for nspec in range(len(qsos.z_qsos)):
     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
     # saving plots: z_samples versus poseteriors
@@ -47,9 +49,9 @@ for nspec in np.where(index)[0]:
     plt.savefig("{}_posterior_zqso_samples_delta_z_{}.pdf".format(
             qsos.thing_ids[nspec], delta_z),
             dpi=150, format='pdf')
-    plt.close()
-    plt.clf()
-    # plt.show()
+    # plt.close()
+    # plt.clf()
+    plt.show()
 
     # saving plots: MAP estimate model
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
@@ -58,9 +60,9 @@ for nspec in np.where(index)[0]:
     make_zqso_plots.save_figure(
         "{}_this_mu_delta_z_{}_ZMAP".format(
             qsos.thing_ids[nspec], delta_z))
-    plt.close()
-    plt.clf()
-    # plt.show()
+    # plt.close()
+    # plt.clf()
+    plt.show()
 
     # saving plots: True QSO rest-frame
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
@@ -69,9 +71,9 @@ for nspec in np.where(index)[0]:
     make_zqso_plots.save_figure(
         "{}_this_mu_delta_z_{}_ZTrue".format(
             qsos.thing_ids[nspec], delta_z))
-    plt.close()
-    plt.clf()
-    # plt.show()
+    # plt.close()
+    # plt.clf()
+    plt.show()
 
 # inspect the this_wavelength due to the normalisation is weird
 this_wavelengths    = qsos.find_this_wavelengths(nspec)
