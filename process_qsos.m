@@ -52,6 +52,11 @@ all_thing_ids      =   catalog.thing_ids(test_ind);
 z_qsos = catalog.z_qsos(test_ind);
 
 num_quasars = numel(z_qsos);
+if exist('qso_ind', 'var') == 0
+    qso_ind = 1:1:floor(num_quasars/100);
+end
+num_quasars = numel(qso_ind);
+
 %load('./test/M.mat');
 % preprocess model interpolants
 mu_interpolator = ...
@@ -84,6 +89,10 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
     tic;
     quasar_num = qso_ind(quasar_ind);
     z_true(quasar_ind)   = z_qsos(quasar_num);
+
+    fprintf('processing quasar %i/%i (z_true = %0.4f) ...', ...
+        quasar_ind, num_quasars, z_true(quasar_ind));
+
     %computing signal-to-noise ratio
     this_wavelengths    =    all_wavelengths{quasar_num};
     this_flux           =           all_flux{quasar_num};
@@ -169,7 +178,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         this_flux             =             this_flux(ind);
         this_noise_variance   =   this_noise_variance(ind);
 
-        this_noise_variance(isinf(this_noise_variance)) = mean(this_noise_variance); %rare kludge to fix bad data
+        this_noise_variance(isinf(this_noise_variance)) = nanmean(this_noise_variance); %rare kludge to fix bad data
         
         fluxes{i}           = this_flux;
         rest_wavelengths{i} = this_rest_wavelengths;
@@ -195,10 +204,12 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
     end
     this_sample_log = sample_log_posteriors(quasar_ind, :);
     
-    [~, I] = max(this_sample_log);
+    [~, I] = nanmax(this_sample_log);
     
     z_map(quasar_ind) = offset_samples_qso(I);                                  %MAP estimate
     
+    fprintf(' took %0.3fs.\n', toc);
+
     zdiff = z_map(quasar_ind) - z_qsos(quasar_ind);
     if mod(quasar_ind, 1) == 0
         t = toc;
