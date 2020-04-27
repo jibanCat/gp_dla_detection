@@ -21,20 +21,24 @@ load(sprintf('%s/learned_zqso_only_model_%s',             ...
 catalog = load(sprintf('%s/zqso_only_catalog', processed_directory(release)));
 
 z_qsos = catalog.z_qsos;
-% Generate samples with different quasar redshifts
-max_z_qso = max(catalog.z_qsos);
-offset_samples_qso = 1:num_zqso_samples;
-offset_samples_qso = z_qso_cut + (offset_samples_qso - 1) * (max_z_qso - z_qso_cut)/num_zqso_samples;
+
+rng('default');
+sequence = scramble(haltonset(1), 'rr2');
+
+% ADDING: second dimension for z_qso
+offset_samples_qso  = sequence(1:num_zqso_samples, 1)';
 
 bins = 150;
-[z_freq, z_bin] = histcounts(z_qsos, [z_qso_cut : ((max(z_qsos) - z_qso_cut) / bins) : max(z_qsos)]);
+[z_freq, z_bin] = histcounts(z_qsos, z_qso_cut : ((max(z_qsos) - z_qso_cut) / bins) : max(z_qsos));
 for i=length(z_freq):-1:1
     z_freq(i) = sum(z_freq(1:i));
 end
+
 z_freq = [0 z_freq];
 z_freq = z_freq / max(z_freq);
 [z_freq, I] = unique(z_freq);
 z_bin = z_bin(I);
+
 offset_samples_qso = interp1(z_freq, z_bin, offset_samples_qso);
 
 % load preprocessed QSOs
