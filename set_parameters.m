@@ -61,7 +61,7 @@ min_lambda         = lya_wavelength;                 % range of rest wavelengths
 max_lambda         = 2840;                 %   model
 dlambda            = 0.25;                 % separation of wavelength grid      Å
 k                  = 20;                      % rank of non-diagonal contribution
-max_noise_variance = 4^2;                     % maximum pixel noise allowed during model training
+max_noise_variance = 2^2;                     % maximum pixel noise allowed during model training
 
 % optimization parameters
 minFunc_options =               ...           % optimization options for model fitting
