@@ -142,20 +142,20 @@ for i = 1:num_quasars
   % to avoid the problem for negative flux
   neg_ind = (this_rest_flux <= 0);
   this_rest_flux(neg_ind) = nanmedian(this_rest_flux);
-  fprintf('Number of negative flux pixels: %d', sum(neg_ind))
+  fprintf('Number of negative flux pixels: %d\n', sum(neg_ind))
 
   % do the polyfit(1-) in the log space
   %   log( flux ) = b log( lambda ) + log( a )
   % which means the power-law fit
   %   flux = a lambda^b
   % we are seeking a different gamma param population
-  p = polyfit(log(rest_wavelengths), log(this_rest_flux), 1);
+  p = polyfit(log(this_rest_wavelengths), log(this_rest_flux), 1);
 
   b = p(1); % power-law index
   a = p(2); % scalar factor, should be simular
 
-  fprintf('- The multiplication factor a : %d', a)
-  fprintf('- The power-law index b       : %d', b)
+  fprintf('- The multiplication factor a : %d\n', a)
+  fprintf('- The power-law index b       : %d\n', b)
 
   all_ps(i, 1) = b;
   all_ps(i, 2) = a;
@@ -163,7 +163,7 @@ end
 
 % negative power-law index
 ind = all_ps(:, 1) < 0;
-fprintf('Totoal number of positive power-law trend QSOs (possibily extinction) : %d', sum(~ind))
+fprintf('Totoal number of positive power-law trend QSOs (possibily extinction) : %d\n', sum(~ind))
 
 % find empirical mean vector and center data
 % model1: model with positive power-law (positive extinction)
@@ -176,47 +176,70 @@ centered_rest_fluxes2 = bsxfun(@minus, rest_fluxes(ind),  mu2);
 
 clear('rest_fluxes');
 
-% % % small fix to the data fit into the pca:
-% % % make the NaNs to the medians of a given row
-% % % rememeber not to inject this into the actual
-% % % joint likelihood maximisation
-% % pca_centered_rest_flux = centered_rest_fluxes;
+% small fix to the data fit into the pca:
+% make the NaNs to the medians of a given row
+% rememeber not to inject this into the actual
+% joint likelihood maximisation
+pca_centered_rest_flux1 = centered_rest_fluxes1;
+pca_centered_rest_flux2 = centered_rest_fluxes2;
 
-% % [num_quasars, ~] = size(pca_centered_rest_flux);
+[num_quasars1, ~] = size(pca_centered_rest_flux1);
+[num_quasars2, ~] = size(pca_centered_rest_flux2);
 
-% % for i = 1:num_quasars
-% %   this_pca_cetnered_rest_flux = pca_centered_rest_flux(i, :);
+for i = 1:num_quasars1
+  this_pca_cetnered_rest_flux1 = pca_cetnered_rest_flux1(i, :);
 
-% %   % assign median value for each row to nan
-% %   ind = isnan(this_pca_cetnered_rest_flux);
+  % assign median value for each row to nan
+  ind = isnan(this_pca_cetnered_rest_flux1);
   
-% %   pca_centered_rest_flux(i, ind) = nanmedian(this_pca_cetnered_rest_flux);
-% % end
+  pca_centered_rest_flux1(i, ind) = nanmedian(this_pca_cetnered_rest_flux1);
+end
 
-% % get top-k PCA vectors to initialize M
-% [coefficients, ~, latent] = ...
-%   pca_custom(centered_rest_fluxes, ...
-%         'numcomponents', k, ...
-%         'rows',          'pairwise');
-% % initialize A to top-k PCA components of non-DLA-containing spectra
-% initial_M = bsxfun(@times, coefficients(:, 1:k), sqrt(latent(1:k))');
+for i = 1:num_quasars2
+    this_pca_cetnered_rest_flux2 = pca_cetnered_rest_flux2(i, :);
+  
+    % assign median value for each row to nan
+    ind = isnan(this_pca_cetnered_rest_flux2);
+    
+    pca_centered_rest_flux2(i, ind) = nanmedian(this_pca_cetnered_rest_flux2);
+end
 
-% objective_function = @(x) objective(x, centered_rest_fluxes, rest_noise_variances);
 
-% % maximize likelihood via L-BFGS
-% [x, log_likelihood, ~, minFunc_output] = ...
-%     minFunc(objective_function, initial_M, minFunc_options);
+% get top-k PCA vectors to initialize M
+[coefficients1, ~, latent1] = ...
+  pca_custom(centered_rest_fluxes1, ...
+        'numcomponents', k, ...
+        'rows',          'pairwise');
 
-% ind = (1:(num_rest_pixels * k));
-% M = reshape(x(ind), [num_rest_pixels, k]);
+[coefficients2, ~, latent2] = ...
+  pca_custom(centered_rest_fluxes2, ...
+        'numcomponents', k, ...
+        'rows',          'pairwise');
 
-% variables_to_save = {'training_release', 'train_ind', 'max_noise_variance', ...
-%                      'minFunc_options', 'rest_wavelengths', 'mu', ...
-%                      'initial_M', 'M',  'log_likelihood', ...
-%                      'minFunc_output'};
+% initialize A to top-k PCA components of non-DLA-containing spectra
+initial_M1 = bsxfun(@times, coefficients1(:, 1:k), sqrt(latent1(1:k))');
+initial_M2 = bsxfun(@times, coefficients2(:, 1:k), sqrt(latent1(1:k))');
 
-variables_to_save = {'all_ps', 'mu1', 'mu2'};
 
+objective_function1 = @(x) objective(x, centered_rest_fluxes1, rest_noise_variances1);
+objective_function2 = @(x) objective(x, centered_rest_fluxes2, rest_noise_variances2);
+
+% maximize likelihood via L-BFGS
+[x1, log_likelihood1, ~, minFunc_output1] = ...
+    minFunc(objective_function1, initial_M1, minFunc_options);
+
+[x2, log_likelihood2, ~, minFunc_output2] = ...
+    minFunc(objective_function2, initial_M2, minFunc_options);
+
+ind = (1:(num_rest_pixels * k));
+
+M1 = reshape(x1(ind), [num_rest_pixels, k]);
+M2 = reshape(x2(ind), [num_rest_pixels, k]);
+
+variables_to_save = {'training_release', 'train_ind', 'max_noise_variance', ...
+                     'minFunc_options', 'rest_wavelengths', 'mu1', 'mu2', ...
+                     'initial_M1', 'initial_M2', 'M1', 'M2',  'log_likelihood1', ...
+                     'log_likelihood2', 'minFunc_output1', 'minFunc_output2', 'all_ps'};
 
 save(sprintf('%s/learned_two_model_zqso_only_model_%s',             ...
              processed_directory(training_release), ...
