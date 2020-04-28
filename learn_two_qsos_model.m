@@ -131,25 +131,42 @@ for i = 1:num_quasars
 
   % pick up the emission free regions
   ind = (1300 < rest_wavelengths) & (rest_wavelengths < 1350);
-  ind = ind | (1425 < rest_wavelengths) & (rest_wavelengths < 1500);
-  ind = ind | (1650 < rest_wavelengths) & (rest_wavelengths < 1750);
-  ind = ind | (2000 < rest_wavelengths) & (rest_wavelengths < 2200);
 
-  this_rest_flux           = this_rest_flux(ind);
-  this_rest_noise_variance = rest_noise_variances(ind);
-  this_rest_wavelengths    = rest_wavelengths(ind);
+  f1 = nanmedian(this_rest_flux(ind));
+  l1 = nanmedian(rest_wavelengths(ind));
 
-  % to avoid the problem for negative flux
-  neg_ind = (this_rest_flux <= 0);
-  this_rest_flux(neg_ind) = nanmedian(this_rest_flux);
-  fprintf('Number of negative flux pixels: %d\n', sum(neg_ind))
+  ind = (1425 < rest_wavelengths) & (rest_wavelengths < 1500);
+
+  f2 = nanmedian(this_rest_flux(ind));
+  l2 = nanmedian(rest_wavelengths(ind));
+  
+  ind = (1650 < rest_wavelengths) & (rest_wavelengths < 1750);
+
+  f3 = nanmedian(this_rest_flux(ind));
+  l3 = nanmedian(rest_wavelengths(ind));
+
+  ind = (2000 < rest_wavelengths) & (rest_wavelengths < 2200);
+
+  f4 = nanmedian(this_rest_flux(ind));
+  l4 = nanmedian(rest_wavelengths(ind));
+
+%   this_rest_flux           = this_rest_flux(ind);
+%   this_rest_noise_variance = rest_noise_variances(ind);
+%   this_rest_wavelengths    = rest_wavelengths(ind);
+
+%   % to avoid the problem for negative flux
+%   neg_ind = (this_rest_flux <= 0);
+%   this_rest_flux(neg_ind) = nanmedian(this_rest_flux);
+%   fprintf('Number of negative flux pixels: %d\n', sum(neg_ind))
+
+  fprintf('Median Flux vector: %d %d %d %d\n', [f1, f2, f3, f4] )
 
   % do the polyfit(1-) in the log space
   %   log( flux ) = b log( lambda ) + log( a )
   % which means the power-law fit
   %   flux = a lambda^b
   % we are seeking a different gamma param population
-  p = polyfit(log(this_rest_wavelengths), log(this_rest_flux), 1);
+  p = polyfit(log([l1, l2, l3, l4]), log([f1, f2, f3, f4]), 1);
 
   b = p(1); % power-law index
   a = p(2); % scalar factor, should be simular
@@ -176,70 +193,74 @@ centered_rest_fluxes2 = bsxfun(@minus, rest_fluxes(ind),  mu2);
 
 clear('rest_fluxes');
 
-% small fix to the data fit into the pca:
-% make the NaNs to the medians of a given row
-% rememeber not to inject this into the actual
-% joint likelihood maximisation
-pca_centered_rest_flux1 = centered_rest_fluxes1;
-pca_centered_rest_flux2 = centered_rest_fluxes2;
+% % small fix to the data fit into the pca:
+% % make the NaNs to the medians of a given row
+% % rememeber not to inject this into the actual
+% % joint likelihood maximisation
+% pca_centered_rest_flux1 = centered_rest_fluxes1;
+% pca_centered_rest_flux2 = centered_rest_fluxes2;
 
-[num_quasars1, ~] = size(pca_centered_rest_flux1);
-[num_quasars2, ~] = size(pca_centered_rest_flux2);
+% [num_quasars1, ~] = size(pca_centered_rest_flux1);
+% [num_quasars2, ~] = size(pca_centered_rest_flux2);
 
-for i = 1:num_quasars1
-  this_pca_cetnered_rest_flux1 = pca_cetnered_rest_flux1(i, :);
+% for i = 1:num_quasars1
+%   this_pca_cetnered_rest_flux1 = pca_cetnered_rest_flux1(i, :);
 
-  % assign median value for each row to nan
-  ind = isnan(this_pca_cetnered_rest_flux1);
+%   % assign median value for each row to nan
+%   ind = isnan(this_pca_cetnered_rest_flux1);
   
-  pca_centered_rest_flux1(i, ind) = nanmedian(this_pca_cetnered_rest_flux1);
-end
+%   pca_centered_rest_flux1(i, ind) = nanmedian(this_pca_cetnered_rest_flux1);
+% end
 
-for i = 1:num_quasars2
-    this_pca_cetnered_rest_flux2 = pca_cetnered_rest_flux2(i, :);
+% for i = 1:num_quasars2
+%     this_pca_cetnered_rest_flux2 = pca_cetnered_rest_flux2(i, :);
   
-    % assign median value for each row to nan
-    ind = isnan(this_pca_cetnered_rest_flux2);
+%     % assign median value for each row to nan
+%     ind = isnan(this_pca_cetnered_rest_flux2);
     
-    pca_centered_rest_flux2(i, ind) = nanmedian(this_pca_cetnered_rest_flux2);
-end
+%     pca_centered_rest_flux2(i, ind) = nanmedian(this_pca_cetnered_rest_flux2);
+% end
 
 
-% get top-k PCA vectors to initialize M
-[coefficients1, ~, latent1] = ...
-  pca_custom(centered_rest_fluxes1, ...
-        'numcomponents', k, ...
-        'rows',          'pairwise');
+% % get top-k PCA vectors to initialize M
+% [coefficients1, ~, latent1] = ...
+%   pca_custom(centered_rest_fluxes1, ...
+%         'numcomponents', k, ...
+%         'rows',          'pairwise');
 
-[coefficients2, ~, latent2] = ...
-  pca_custom(centered_rest_fluxes2, ...
-        'numcomponents', k, ...
-        'rows',          'pairwise');
+% [coefficients2, ~, latent2] = ...
+%   pca_custom(centered_rest_fluxes2, ...
+%         'numcomponents', k, ...
+%         'rows',          'pairwise');
 
-% initialize A to top-k PCA components of non-DLA-containing spectra
-initial_M1 = bsxfun(@times, coefficients1(:, 1:k), sqrt(latent1(1:k))');
-initial_M2 = bsxfun(@times, coefficients2(:, 1:k), sqrt(latent1(1:k))');
+% % initialize A to top-k PCA components of non-DLA-containing spectra
+% initial_M1 = bsxfun(@times, coefficients1(:, 1:k), sqrt(latent1(1:k))');
+% initial_M2 = bsxfun(@times, coefficients2(:, 1:k), sqrt(latent1(1:k))');
 
 
-objective_function1 = @(x) objective(x, centered_rest_fluxes1, rest_noise_variances1);
-objective_function2 = @(x) objective(x, centered_rest_fluxes2, rest_noise_variances2);
+% objective_function1 = @(x) objective(x, centered_rest_fluxes1, rest_noise_variances1);
+% objective_function2 = @(x) objective(x, centered_rest_fluxes2, rest_noise_variances2);
 
-% maximize likelihood via L-BFGS
-[x1, log_likelihood1, ~, minFunc_output1] = ...
-    minFunc(objective_function1, initial_M1, minFunc_options);
+% % maximize likelihood via L-BFGS
+% [x1, log_likelihood1, ~, minFunc_output1] = ...
+%     minFunc(objective_function1, initial_M1, minFunc_options);
 
-[x2, log_likelihood2, ~, minFunc_output2] = ...
-    minFunc(objective_function2, initial_M2, minFunc_options);
+% [x2, log_likelihood2, ~, minFunc_output2] = ...
+%     minFunc(objective_function2, initial_M2, minFunc_options);
 
-ind = (1:(num_rest_pixels * k));
+% ind = (1:(num_rest_pixels * k));
 
-M1 = reshape(x1(ind), [num_rest_pixels, k]);
-M2 = reshape(x2(ind), [num_rest_pixels, k]);
+% M1 = reshape(x1(ind), [num_rest_pixels, k]);
+% M2 = reshape(x2(ind), [num_rest_pixels, k]);
+
+% variables_to_save = {'training_release', 'train_ind', 'max_noise_variance', ...
+%                      'minFunc_options', 'rest_wavelengths', 'mu1', 'mu2', ...
+%                      'initial_M1', 'initial_M2', 'M1', 'M2',  'log_likelihood1', ...
+%                      'log_likelihood2', 'minFunc_output1', 'minFunc_output2', 'all_ps'};
+
 
 variables_to_save = {'training_release', 'train_ind', 'max_noise_variance', ...
-                     'minFunc_options', 'rest_wavelengths', 'mu1', 'mu2', ...
-                     'initial_M1', 'initial_M2', 'M1', 'M2',  'log_likelihood1', ...
-                     'log_likelihood2', 'minFunc_output1', 'minFunc_output2', 'all_ps'};
+                     'minFunc_options', 'rest_wavelengths', 'mu1', 'mu2', 'all_ps'};
 
 save(sprintf('%s/learned_two_model_zqso_only_model_%s',             ...
              processed_directory(training_release), ...
