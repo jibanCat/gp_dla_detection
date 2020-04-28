@@ -126,26 +126,26 @@ mu = nanmean(rest_fluxes);
 centered_rest_fluxes = bsxfun(@minus, rest_fluxes, mu);
 clear('rest_fluxes');
 
-% % small fix to the data fit into the pca:
-% % make the NaNs to the medians of a given row
-% % rememeber not to inject this into the actual
-% % joint likelihood maximisation
-% pca_centered_rest_flux = centered_rest_fluxes;
+% small fix to the data fit into the pca:
+% make the NaNs to the medians of a given row
+% rememeber not to inject this into the actual
+% joint likelihood maximisation
+pca_centered_rest_flux = centered_rest_fluxes;
 
-% [num_quasars, ~] = size(pca_centered_rest_flux);
+[num_quasars, ~] = size(pca_centered_rest_flux);
 
-% for i = 1:num_quasars
-%   this_pca_cetnered_rest_flux = pca_centered_rest_flux(i, :);
+for i = 1:num_quasars
+  this_pca_cetnered_rest_flux = pca_centered_rest_flux(i, :);
 
-%   % assign median value for each row to nan
-%   ind = isnan(this_pca_cetnered_rest_flux);
-  
-%   pca_centered_rest_flux(i, ind) = nanmedian(this_pca_cetnered_rest_flux);
-% end
+  % assign median value for each row to nan
+  ind = isnan(this_pca_cetnered_rest_flux);
+
+  pca_centered_rest_flux(i, ind) = nanmedian(this_pca_cetnered_rest_flux);
+end
 
 % get top-k PCA vectors to initialize M
 [coefficients, ~, latent] = ...
-  pca_custom(centered_rest_fluxes, ...
+  pca(pca_centered_rest_flux, ...
         'numcomponents', k, ...
         'rows',          'complete');
 % initialize A to top-k PCA components of non-DLA-containing spectra
