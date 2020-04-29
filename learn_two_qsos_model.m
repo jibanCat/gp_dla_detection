@@ -174,8 +174,7 @@ for i = 1:num_quasars
   fprintf('- The multiplication factor a : %d\n', a)
   fprintf('- The power-law index b       : %d\n', b)
 
-  all_ps(i, 1) = b;
-  all_ps(i, 2) = a;
+  all_ps(i, :) = p;
 end
 
 % negative power-law index
