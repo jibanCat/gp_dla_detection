@@ -1,23 +1,11 @@
-% process_qsos: run DLA detection algorithm on specified objects
-% 
-% Apr 8, 2020: add all Lyman series to the effective optical depth
-%   effective_optical_depth := ∑ τ fi1 λi1 / ( f21 λ21 ) * ( 1 + z_i1 )^β
-%  where 
-%   1 + z_i1 =  λobs / λ_i1 = λ_lya / λ_i1 *  (1 + z_a)
-% Dec 25, 2019: add Lyman series to the noise variance training
-%   s(z)     = 1 - exp(-effective_optical_depth) + c_0 
-% the mean values of Kim's effective optical depth
-prev_tau_0 = 0.0023;
-prev_beta  = 3.65;
-
-occams_factor = 1000;
+% process_two_qsos.m : inferencing on QSO redshifts using GPs, 
+% including one model with extinction and one model without extinction.
 
 % load QSO model from training release
 variables_to_load = {'rest_wavelengths', 'mu', 'M'};
-load(sprintf('%s/learned_zqso_only_model_%s_norm_%d-%d',             ...
+load(sprintf('%s/learned_zqso_only_model_%s',             ...
     processed_directory(training_release), ...
-    training_set_name, ...
-    normalization_min_lambda, normalization_max_lambda),                    ...
+    training_set_name),                    ...
     variables_to_load{:});
 
 % load redshifts from catalog to process
@@ -199,12 +187,8 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
        
         sample_log_priors = 0;
 
-        % additional occams razor for penalizing the not enough data points in the window
-        occams = occams_factor * (1 - lambda_observed / (max_lambda - min_lambda) );
-
         sample_log_posteriors(quasar_ind, i) = ...
-            log_mvnpdf_low_rank(this_flux, this_mu, this_M, this_noise_variance) + sample_log_priors ...
-            - occams;
+            log_mvnpdf_low_rank(this_flux, this_mu, this_M, this_noise_variance) + sample_log_priors;
 
         % % Correct for incomplete data
         % corr = nnz(ind) - length(this_rest_wavelengths);
@@ -233,11 +217,9 @@ end
 variables_to_save = {'training_release', 'training_set_name', 'offset_samples_qso', 'sample_log_posteriors', ...
      'z_map', 'z_qsos', 'all_thing_ids', 'test_ind', 'z_true'};
 
-filename = sprintf('%s/processed_zqso_only_qsos_%s-%s_%d-%d_%d-%d', ...
+filename = sprintf('%s/processed_zqso_only_qsos_%s-%s_%d-%d', ...
     processed_directory(release), ...
     test_set_name, optTag, ...
-    qso_ind(1), qso_ind(1) + numel(qso_ind), ...
-    normalization_min_lambda, normalization_max_lambda);
+    qso_ind(1), qso_ind(1) + numel(qso_ind));
 
 save(filename, variables_to_save{:}, '-v7.3');
-
