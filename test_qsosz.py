@@ -20,6 +20,11 @@ index = qsos.plot_z_map(delta_z=delta_z)
 make_zqso_plots.save_figure("z_map_vs_z_true_pure-z")
 plt.show()
 
+print("Misfits : ", qsos.thing_ids[index].shape[0])
+print("Thing_IDs = ", qsos.thing_ids[index])
+print("MSE z_true-z_map : {:.3g}".format( np.mean( (qsos.z_map - qsos.z_true)**2 )  ))
+print("Misfit SNRs (catalog values) : ", qsos.snrs_cat[index])
+
 # plot specific example: this example shows -inf posteriors
 # at the true zQSO parameter space
 nspec = 15
@@ -40,8 +45,8 @@ qsos.plot_this_mu(nspec=nspec, suppressed=True,
 plt.ylim(-1, 5)
 plt.show()
 
-# for nspec in np.where(index)[0]:
-for nspec in range(len(qsos.z_qsos)):
+for nspec in np.where(index)[0]:
+# for nspec in range(len(qsos.z_qsos)):
     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
     # saving plots: z_samples versus poseteriors
