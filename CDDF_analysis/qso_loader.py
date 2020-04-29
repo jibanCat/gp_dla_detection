@@ -1249,8 +1249,8 @@ class QSOLoaderZ(QSOLoader):
     A specific QSOLoader for Z estimation
     '''
     # include the normaliser since it is not in the processed file
-    normalization_min_lambda = 1216                 # range of rest wavelengths to use   Å
-    normalization_max_lambda = 1300                 #   for flux normalization
+    normalization_min_lambda = 1216 - 40                 # range of rest wavelengths to use   Å
+    normalization_max_lambda = 1216 + 40                 #   for flux normalization
 
 
     def __init__(self, preloaded_file="preloaded_qsos.mat", catalogue_file="catalog.mat", 
@@ -1350,11 +1350,11 @@ class QSOLoaderZ(QSOLoader):
         '''
         ind = self.find_large_delta_z(self.z_map, self.z_true, delta_z)
 
-        plt.scatter(self.z_map[~ind], self.z_true[~ind], alpha=0.1)
+        plt.scatter(self.z_map[~ind], self.z_true[~ind])
         
         plt.scatter(self.z_map[ind], self.z_true[ind],
             color="red",
-            label="z_delta > {:.2g}".format(delta_z),    alpha=0.1)
+            label="z_delta > {:.2g}".format(delta_z))
         print("miss z estimate : {:.2g}%".format(ind.sum() / ind.shape[0] * 100))
         print("index with larger than delta_z:", np.where(~self.nan_inds)[0][ind] )
 
