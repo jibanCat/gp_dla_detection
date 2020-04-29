@@ -10,6 +10,8 @@
 prev_tau_0 = 0.0023;
 prev_beta  = 3.65;
 
+occams_factor = 1000;
+
 % load QSO model from training release
 variables_to_load = {'rest_wavelengths', 'mu', 'M'};
 load(sprintf('%s/learned_zqso_only_model_%s',             ...
@@ -196,8 +198,12 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
        
         sample_log_priors = 0;
 
+        % additional occams razor for penalizing the not enough data points in the window
+        occams = occams_factor * (1 - lambda_observed / (max_lambda - min_lambda) );
+
         sample_log_posteriors(quasar_ind, i) = ...
-            log_mvnpdf_low_rank(this_flux, this_mu, this_M, this_noise_variance) + sample_log_priors;
+            log_mvnpdf_low_rank(this_flux, this_mu, this_M, this_noise_variance) + sample_log_priors ...
+            - occams;
 
         % % Correct for incomplete data
         % corr = nnz(ind) - length(this_rest_wavelengths);
