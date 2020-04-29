@@ -10,7 +10,7 @@
 prev_tau_0 = 0.0023;
 prev_beta  = 3.65;
 
-occams_factor = 10000;
+occams_factor = 5000;
 
 % load QSO model from training release
 variables_to_load = {'rest_wavelengths', 'mu', 'M'};
