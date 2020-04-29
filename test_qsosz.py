@@ -45,8 +45,8 @@ qsos.plot_this_mu(nspec=nspec, suppressed=True,
 plt.ylim(-1, 5)
 plt.show()
 
-for nspec in np.where(index)[0]:
-# for nspec in range(len(qsos.z_qsos)):
+# for nspec in np.where(index)[0]:
+for nspec in range(100):
     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
     # saving plots: z_samples versus poseteriors
