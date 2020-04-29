@@ -24,7 +24,7 @@ load(sprintf('%s/learned_zqso_only_model_%s_norm_%d-%d',             ...
 catalog = load(sprintf('%s/zqso_only_catalog', processed_directory(release)));
 
 z_qsos = catalog.z_qsos;
-snrs   = catalog.snrs;   % catalogue snrs helps to rescale occam's razor
+% snrs   = catalog.snrs;   % catalogue snrs helps to rescale occam's razor
 
 rng('default');
 sequence = scramble(haltonset(1), 'rr2');
@@ -58,7 +58,7 @@ all_pixel_mask     =     all_pixel_mask(test_ind);
 all_thing_ids      =   catalog.thing_ids(test_ind);
 
 z_qsos = catalog.z_qsos(test_ind);
-snrs   = snrs(test_ind);
+% snrs   = snrs(test_ind);
 
 num_quasars = numel(z_qsos);
 if exist('qso_ind', 'var') == 0
@@ -87,7 +87,7 @@ fluxes                   = cell(length(z_list), 1);
 rest_wavelengths         = cell(length(z_list), 1);
 
 % this is just an array allow you to select a range
-% of quasars to run
+% of quasars to runqso_ind
 quasar_ind = 1;
 q_ind_start = quasar_ind;
 
@@ -100,11 +100,11 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
     z_true(quasar_ind)   = z_qsos(quasar_num);
 
     % rescale the occams_factor
-    this_snr             = snrs(quasar_num);
+    % this_snr             = snrs(quasar_num);
     this_occams_factor   = occams_factor;     %* sqrt(this_snr / nanmedian(snrs));
 
     fprintf('processing quasar %i/%i (z_true = %0.4f) ...', ...
-        quasar_ind, num_quasars, z_true(quasar_ind));
+        quasar_num, num_quasars, z_true(quasar_ind));
 
     %computing signal-to-noise ratio
     this_wavelengths    =    all_wavelengths{quasar_num};
@@ -227,7 +227,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
     
     fprintf(' took %0.3fs.\n', toc);
 
-    zdiff = z_map(quasar_ind) - z_qsos(quasar_ind);
+    zdiff = z_map(quasar_ind) - z_qsos(quasar_num);
     if mod(quasar_ind, 1) == 0
         t = toc;
         fprintf('Done QSO %i of %i in %0.3f s. True z_QSO = %0.4f, I=%d map=%0.4f dif = %.04f\n', ...
