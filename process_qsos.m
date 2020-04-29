@@ -10,7 +10,7 @@
 prev_tau_0 = 0.0023;
 prev_beta  = 3.65;
 
-occams_factor = 1000;
+occams_factor = 10000;
 
 % load QSO model from training release
 variables_to_load = {'rest_wavelengths', 'mu', 'M'};
@@ -233,11 +233,11 @@ end
 variables_to_save = {'training_release', 'training_set_name', 'offset_samples_qso', 'sample_log_posteriors', ...
      'z_map', 'z_qsos', 'all_thing_ids', 'test_ind', 'z_true'};
 
-filename = sprintf('%s/processed_zqso_only_qsos_%s-%s_%d-%d_%d-%d', ...
+filename = sprintf('%s/processed_zqso_only_qsos_%s-%s_%d-%d_%d-%d_oc%d', ...
     processed_directory(release), ...
     test_set_name, optTag, ...
     qso_ind(1), qso_ind(1) + numel(qso_ind), ...
-    normalization_min_lambda, normalization_max_lambda);
+    normalization_min_lambda, normalization_max_lambda, occams_factor);
 
 save(filename, variables_to_save{:}, '-v7.3');
 
