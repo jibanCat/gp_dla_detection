@@ -24,6 +24,7 @@ load(sprintf('%s/learned_zqso_only_model_%s_norm_%d-%d',             ...
 catalog = load(sprintf('%s/zqso_only_catalog', processed_directory(release)));
 
 z_qsos = catalog.z_qsos;
+snrs   = catalog.snrs;   % catalogue snrs helps to rescale occam's razor
 
 rng('default');
 sequence = scramble(haltonset(1), 'rr2');
@@ -57,6 +58,7 @@ all_pixel_mask     =     all_pixel_mask(test_ind);
 all_thing_ids      =   catalog.thing_ids(test_ind);
 
 z_qsos = catalog.z_qsos(test_ind);
+snrs   = snrs(test_ind);
 
 num_quasars = numel(z_qsos);
 if exist('qso_ind', 'var') == 0
@@ -96,6 +98,10 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
     tic;
     quasar_num = qso_ind(quasar_ind);
     z_true(quasar_ind)   = z_qsos(quasar_num);
+
+    % rescale the occams_factor
+    this_snr             = snrs(quasar_num);
+    this_occams_factor   = occams_factor * this_snr / nanmedian(snrs);
 
     fprintf('processing quasar %i/%i (z_true = %0.4f) ...', ...
         quasar_ind, num_quasars, z_true(quasar_ind));
@@ -200,7 +206,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         sample_log_priors = 0;
 
         % additional occams razor for penalizing the not enough data points in the window
-        occams = occams_factor * (1 - lambda_observed / (max_lambda - min_lambda) );
+        occams = this_occams_factor * (1 - lambda_observed / (max_lambda - min_lambda) );
 
         sample_log_posteriors(quasar_ind, i) = ...
             log_mvnpdf_low_rank(this_flux, this_mu, this_M, this_noise_variance) + sample_log_priors ...
@@ -233,7 +239,7 @@ end
 variables_to_save = {'training_release', 'training_set_name', 'offset_samples_qso', 'sample_log_posteriors', ...
      'z_map', 'z_qsos', 'all_thing_ids', 'test_ind', 'z_true'};
 
-filename = sprintf('%s/processed_zqso_only_qsos_%s-%s_%d-%d_%d-%d_oc%d', ...
+filename = sprintf('%s/processed_zqso_only_qsos_%s-%s_%d-%d_%d-%d_oca%d', ...
     processed_directory(release), ...
     test_set_name, optTag, ...
     qso_ind(1), qso_ind(1) + numel(qso_ind), ...
