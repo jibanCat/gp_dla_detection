@@ -10,7 +10,7 @@
 prev_tau_0 = 0.0023;
 prev_beta  = 3.65;
 
-occams_factor = 5000;
+occams_factor = 3000;
 
 % load QSO model from training release
 variables_to_load = {'rest_wavelengths', 'mu', 'M'};
@@ -101,7 +101,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
 
     % rescale the occams_factor
     this_snr             = snrs(quasar_num);
-    this_occams_factor   = occams_factor * this_snr / nanmedian(snrs);
+    this_occams_factor   = occams_factor;     %* sqrt(this_snr / nanmedian(snrs));
 
     fprintf('processing quasar %i/%i (z_true = %0.4f) ...', ...
         quasar_ind, num_quasars, z_true(quasar_ind));
