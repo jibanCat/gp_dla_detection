@@ -56,9 +56,14 @@ def mat_combine(processed_files, out_filename, chunk_size, maxshape_size):
 
                 del out_array
 
-
-    assert 0.95 < out['model_posteriors'][:, -1].sum() <= 1.01
-    assert out['p_dlas'].shape[-1] == maxshape_size
+    # no model posteriors for z estimation code
+    try:
+        assert 0.95 < out['model_posteriors'][:, -1].sum() <= 1.01
+    except Exception as e:
+        print(e)
+        # note that I intentionally put z_map here to say this is zesitmation only
+        # so a corrupted multi-DLA processed file will not pass this silently
+        assert out['z_map'].shape[-1] == maxshape_size
 
     out.close()
 
