@@ -247,7 +247,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
     if mod(quasar_ind, 1) == 0
         t = toc;
         fprintf('Done QSO %i of %i in %0.3f s. True z_QSO = %0.4f, I=%d map=%0.4f dif = %.04f\n', ...
-            quasar_ind, num_quasars, t, z_qsos(quasar_ind), I, z_map(quasar_ind), zdiff);
+            quasar_ind, num_quasars, t, z_qsos(quasar_num), I, z_map(quasar_ind), zdiff);
     end
 
     % record posdef error;
