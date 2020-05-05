@@ -10,7 +10,7 @@ from CDDF_analysis.set_parameters import *
 
 matplotlib.use('TkAgg')
 
-delta_z = 0.5
+delta_z = 0.05
 
 # generate QSOLoader insrance
 qsos = make_zqso_plots.generate_qsos()
@@ -45,8 +45,11 @@ qsos.plot_this_mu(nspec=nspec, suppressed=True,
 plt.ylim(-1, 5)
 plt.show()
 
-# for nspec in np.where(index)[0]:
-for nspec in range(100):
+# finding the   0.1 < | z_true - z_map | < 0.5
+# index = (np.abs(qsos.z_true - qsos.z_map) < 0.075) & (np.abs(qsos.z_true - qsos.z_map) > 0.05)
+
+for nspec in np.where(index)[0]:
+# for nspec in range(100):
     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
     # saving plots: z_samples versus poseteriors
@@ -54,9 +57,9 @@ for nspec in range(100):
     plt.savefig("{}_posterior_zqso_samples_delta_z_{}.pdf".format(
             qsos.thing_ids[nspec], delta_z),
             dpi=150, format='pdf')
-    # plt.close()
-    # plt.clf()
-    plt.show()
+    plt.close()
+    plt.clf()
+    # plt.show()
 
     # saving plots: MAP estimate model
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
@@ -65,9 +68,9 @@ for nspec in range(100):
     make_zqso_plots.save_figure(
         "{}_this_mu_delta_z_{}_ZMAP".format(
             qsos.thing_ids[nspec], delta_z))
-    # plt.close()
-    # plt.clf()
-    plt.show()
+    plt.close()
+    plt.clf()
+    # plt.show()
 
     # saving plots: True QSO rest-frame
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
@@ -76,9 +79,9 @@ for nspec in range(100):
     make_zqso_plots.save_figure(
         "{}_this_mu_delta_z_{}_ZTrue".format(
             qsos.thing_ids[nspec], delta_z))
-    # plt.close()
-    # plt.clf()
-    plt.show()
+    plt.close()
+    plt.clf()
+    # plt.show()
 
 # inspect the this_wavelength due to the normalisation is weird
 this_wavelengths    = qsos.find_this_wavelengths(nspec)

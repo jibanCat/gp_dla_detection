@@ -1344,24 +1344,55 @@ class QSOLoaderZ(QSOLoader):
         ind = np.abs( z_map - z_true ) > delta_z
         return ind
 
+    def find_missfits(self, delta_z=0.1):
+        '''
+        A simple function to catagorized different types of misfits:
+        1. put Lya on CIV
+        2. put Lyb on CIV
+        3. put Lya on Lyb
+        '''
+        raise NotImplementedError
+
+
     def plot_z_map(self, zmin=2.15, zmax=6, delta_z=1):
         '''
         plot the z_map as x-axis and z_true as y-axis
         '''
         ind = self.find_large_delta_z(self.z_map, self.z_true, delta_z)
 
-        plt.scatter(self.z_map[~ind], self.z_true[~ind])
+        # make a standardized fig size for publication
+        plt.figure(figsize=(8, 8))
+
+        plt.scatter(self.z_map[~ind], self.z_true[~ind], alpha=0.03)
         
         plt.scatter(self.z_map[ind], self.z_true[ind],
             color="red",
-            label="z_delta > {:.2g}".format(delta_z))
+            label="z_delta > {:.2g}".format(delta_z), alpha=0.03)
         print("miss z estimate : {:.2g}%".format(ind.sum() / ind.shape[0] * 100))
         print("index with larger than delta_z:", np.where(~self.nan_inds)[0][ind] )
 
-        plt.plot(np.linspace(zmin, zmax, 100), np.linspace(zmin, zmax, 100),
-            color='C1', ls='--')
+        # making some guided lines for inspecting the results
+        z_qsos = np.linspace(zmin, zmax, 100)
+        
+        # perfect predictions
+        plt.plot(z_qsos, z_qsos, color='C1', ls='--')
+
+        # predict model Lya on obs CIV
+        z_civ     = civ_wavelength  * (1 + z_qsos) / lya_wavelength - 1
+        
+        # predict model Lyb on obs CIV
+        z_lyb_civ = civ_wavelength  * (1 + z_qsos) / lyb_wavelength - 1
+
+        # predict model Lya on obs Lyb
+        z_lyb     = lyb_wavelength  * (1 + z_qsos) / lya_wavelength - 1
+
+        plt.plot(z_civ,     z_qsos, color="C2", ls='--', label="put Lya on CIV", alpha=0.7)
+        plt.plot(z_lyb_civ, z_qsos, color="C3", ls='--', label="put Lyb on CIV", alpha=0.7)
+        plt.plot(z_lyb,     z_qsos, color="C4", ls='--', label="put Lya on Lyb", alpha=0.7)
+
         plt.xlim(zmin, zmax)
         plt.ylim(zmin, zmax)
+        plt.legend()
         
         plt.xlabel(r"$z_\mathrm{MAP}$")
         plt.ylabel(r"$z_\mathrm{true}$")
