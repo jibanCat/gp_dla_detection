@@ -50,18 +50,19 @@ loading_max_lambda = 5000;                  % This maximum is set so we include 
 z_qso_cut      = 2.15;         % filter out QSOs with z less than this threshold
 z_qso_training_max_cut = 5; % roughly 95% of training data occurs before this redshift; assuming for normalization purposes (move to set_parameters when pleased)
 z_qso_training_min_cut = 1.5; % Ignore these quasars when training
-min_num_pixels = 300;                         % minimum number of non-masked pixels
+min_num_pixels = 400;                         % minimum number of non-masked pixels
 
 % normalization parameters
-normalization_min_lambda = lya_wavelength;              % range of rest wavelengths to use   Å
-normalization_max_lambda = 1300; %   for flux normalization
+% I use 1216 is basically because I want integer in my saved filenames
+normalization_min_lambda = 1216 - 40;              % range of rest wavelengths to use   Å
+normalization_max_lambda = 1216 + 40;              %   for flux normalization
 
 % null model parameters
-min_lambda         = lya_wavelength;                 % range of rest wavelengths to       Å
-max_lambda         = 2840;                 %   model
+min_lambda         = lya_wavelength - 40;                 % range of rest wavelengths to       Å
+max_lambda         = 3000;                 %   model
 dlambda            = 0.25;                 % separation of wavelength grid      Å
 k                  = 20;                      % rank of non-diagonal contribution
-max_noise_variance = 2^2;                     % maximum pixel noise allowed during model training
+max_noise_variance = 4^2;                     % maximum pixel noise allowed during model training
 
 % optimization parameters
 minFunc_options =               ...           % optimization options for model fitting
@@ -84,5 +85,5 @@ processed_directory = @(release) ...
     sprintf('%s/%s/processed', base_directory, release);
 
 % replace with @(varargin) (fprintf(varargin{:})) to show debug statements
-%fprintf_debug = @(varargin) (fprintf(varargin{:}));
+% fprintf_debug = @(varargin) (fprintf(varargin{:}));
 fprintf_debug = @(varargin) ([]);

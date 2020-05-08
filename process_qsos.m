@@ -1,10 +1,30 @@
 % process_qsos: run DLA detection algorithm on specified objects
+% 
+% Apr 8, 2020: add all Lyman series to the effective optical depth
+%   effective_optical_depth := ∑ τ fi1 λi1 / ( f21 λ21 ) * ( 1 + z_i1 )^β
+%  where 
+%   1 + z_i1 =  λobs / λ_i1 = λ_lya / λ_i1 *  (1 + z_a)
+% Dec 25, 2019: add Lyman series to the noise variance training
+%   s(z)     = 1 - exp(-effective_optical_depth) + c_0 
+% the mean values of Kim's effective optical depth
+%
+% Apr 28: add occams razor for penalising the missing pixels,
+%   this factor is tuned to affect log likelihood in a range +- 500,
+%   this value could be effective to penalise every likelihoods for zQSO > zCIV
+%   the current implemetation is:
+%     likelihood - occams_factor * (1 - lambda_observed / (max_lambda - min_lambda) )
+%   and occams_factor is a tunable hyperparameter
+prev_tau_0 = 0.0023;
+prev_beta  = 3.65;
+
+occams_factor = 1000;
 
 % load QSO model from training release
 variables_to_load = {'rest_wavelengths', 'mu', 'M'};
-load(sprintf('%s/learned_zqso_only_model_%s',             ...
+load(sprintf('%s/learned_zqso_only_model_%s_norm_%d-%d',             ...
     processed_directory(training_release), ...
-    training_set_name),                    ...
+    training_set_name, ...
+    normalization_min_lambda, normalization_max_lambda),                    ...
     variables_to_load{:});
 
 % load redshifts from catalog to process
@@ -15,18 +35,20 @@ z_qsos = catalog.z_qsos;
 rng('default');
 sequence = scramble(haltonset(1), 'rr2');
 
-% ADDING: dimension for z_qso
+% ADDING: second dimension for z_qso
 offset_samples_qso  = sequence(1:num_zqso_samples, 1)';
 
 bins = 150;
-[z_freq, z_bin] = histcounts(z_qsos, [z_qso_cut : ((max(z_qsos) - z_qso_cut) / bins) : max(z_qsos)]);
+[z_freq, z_bin] = histcounts(z_qsos, z_qso_cut : ((max(z_qsos) - z_qso_cut) / bins) : max(z_qsos));
 for i=length(z_freq):-1:1
     z_freq(i) = sum(z_freq(1:i));
 end
+
 z_freq = [0 z_freq];
 z_freq = z_freq / max(z_freq);
 [z_freq, I] = unique(z_freq);
 z_bin = z_bin(I);
+
 offset_samples_qso = interp1(z_freq, z_bin, offset_samples_qso);
 
 % load preprocessed QSOs
@@ -118,10 +140,10 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         all_exceptions(quasar_ind, 1) = 1;
         continue;
     end
-        
+    
     parfor i = 1:num_zqso_samples       %variant redshift in quasars
         z_qso = offset_samples_qso(i);
-        
+
         % keep a copy inside the parfor since we are modifying them
         this_wavelengths    = this_out_wavelengths;
         this_flux           = this_out_flux;
@@ -144,7 +166,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
 
         % convert to QSO rest frame
         this_rest_wavelengths = emitted_wavelengths(this_wavelengths, z_qso);
-        
+
         %normalizing here
         ind = (this_rest_wavelengths >= normalization_min_lambda) & ...
             (this_rest_wavelengths <= normalization_max_lambda);
@@ -161,8 +183,10 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         %     sample_log_posteriors(quasar_ind, i) = -1.e50;
         %     continue;
         % end
-        ind = ind & (~this_pixel_mask);
+        %ind = ind & (~this_pixel_mask);
         
+        ind = ind & (~this_pixel_mask);
+
         this_wavelengths      =      this_wavelengths(ind);
         this_rest_wavelengths = this_rest_wavelengths(ind);
         this_flux             =             this_flux(ind);
@@ -181,9 +205,13 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         %all_Ms{z_list_ind} = this_M;
        
         sample_log_priors = 0;
-        
+
+        % additional occams razor for penalizing the not enough data points in the window
+        occams = occams_factor * (1 - lambda_observed / (max_lambda - min_lambda) );
+
         sample_log_posteriors(quasar_ind, i) = ...
-            log_mvnpdf_low_rank(this_flux, this_mu, this_M, this_noise_variance) + sample_log_priors;
+            log_mvnpdf_low_rank(this_flux, this_mu, this_M, this_noise_variance) + sample_log_priors ...
+            - occams;
 
         % % Correct for incomplete data
         % corr = nnz(ind) - length(this_rest_wavelengths);
@@ -199,7 +227,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
     z_map(quasar_ind) = offset_samples_qso(I);                                  %MAP estimate
 
     fprintf(' took %0.3fs.\n', toc);
-    
+
     zdiff = z_map(quasar_ind) - z_qsos(quasar_ind);
     if mod(quasar_ind, 1) == 0
         t = toc;
@@ -212,8 +240,10 @@ end
 variables_to_save = {'training_release', 'training_set_name', 'offset_samples_qso', 'sample_log_posteriors', ...
      'z_map', 'z_qsos', 'all_thing_ids', 'test_ind', 'z_true'};
 
-filename = sprintf('%s/processed_zqso_only_qsos_%s-%s', ...
+filename = sprintf('%s/processed_zqso_only_qsos_%s-%s_%d-%d_%d-%d_oc%d', ...
     processed_directory(release), ...
-    test_set_name, optTag);
+    test_set_name, optTag, ...
+    qso_ind(1), qso_ind(1) + numel(qso_ind), ...
+    normalization_min_lambda, normalization_max_lambda, occams_factor);
 
 save(filename, variables_to_save{:}, '-v7.3');
