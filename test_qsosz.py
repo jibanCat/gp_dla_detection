@@ -25,6 +25,15 @@ print("Thing_IDs = ", qsos.thing_ids[index])
 print("MSE z_true-z_map : {:.3g}".format( np.mean( (qsos.z_map - qsos.z_true)**2 )  ))
 print("Misfit SNRs (catalog values) : ", qsos.snrs_cat[index])
 
+# 2D histogram
+fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+(h, xedges, yedges, im) = ax.hist2d(qsos.z_map, qsos.z_true,
+    bins = int(np.sqrt(qsos.z_map.shape[0])), cmap='viridis')
+ax.set_xlabel(r"$z_{{QSO,MAP}}$")
+ax.set_ylabel(r"$z_{{QSO,catalog}}$")
+fig.colorbar(im, ax=ax)
+plt.show()
+
 # plot specific example: this example shows -inf posteriors
 # at the true zQSO parameter space
 nspec = 15
