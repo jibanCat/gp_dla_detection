@@ -716,6 +716,73 @@ class QSOLoader(object):
 
         return TPR, FPR
 
+    def make_ROC_parks(self, dla_parks, catalog):
+        '''
+        make a ROC plot for Park's predictions
+
+        dla_parks (str) : path to Parks' catalog
+        catalog   (namedTuple) : concordance catalog named tuple
+        '''
+        dict_parks = self.prediction_json2dict(dla_parks)
+
+        # construct an array of unique ids for los
+        self.unique_ids = self.make_unique_id(self.plates, self.mjds, self.fiber_ids)
+        unique_ids      = self.make_unique_id( dict_parks['plates'], dict_parks['mjds'], dict_parks['fiber_ids']) 
+        assert unique_ids.dtype is np.dtype('int64')
+        assert self.unique_ids.dtype is np.dtype('int64')
+
+        # map Parks' dla_confidences to dla_confidences[in_concordance]
+        unique_ids_los = self.unique_ids[ catalog.real_index_los ]
+        in_parks = np.in1d(unique_ids_los, unique_ids)
+        unique_ids_los = unique_ids_los[in_parks]
+
+        p_dla_parks = []
+        for uid in unique_ids_los:
+            ind = (uid == unique_ids)
+
+            if np.sum(ind) == 0:
+                print("IDs Not matched between Parks and concordance")
+            else:
+                # filter out NaN values and check if any detections left
+                this_p_dlas = dict_parks['dla_confidences'][ind]
+                this_p_dlas = this_p_dlas[~np.isnan(this_p_dlas)]
+                # if all of them are NaNs
+                if this_p_dlas.shape[0] == 0:
+                    p_dla_parks.append(0)
+                # if some of them are real values, append the largest one
+                else:
+                    p_dla_parks.append(np.max(this_p_dlas))
+
+        p_dla_parks = np.array(p_dla_parks)
+
+        # extract the dla_ind from concordance; shape (length of concordance los)
+        dla_ind = np.in1d( catalog.real_index_los, catalog.real_index ) # boolean array, same size
+        dla_ind = dla_ind[in_parks]
+
+
+        rank_idx = np.argsort( p_dla_parks ) # small probs -> large probs
+        assert p_dla_parks[ rank_idx[0] ] < p_dla_parks[ rank_idx[-1] ]
+
+        # re-order every arrays based on the rank
+        dla_ind = dla_ind[ rank_idx ]
+        p_dla_parks_ranked = p_dla_parks[rank_idx]
+
+        TPR = []
+        FPR = []
+
+        for p_dla in p_dla_parks_ranked:
+            pdla_ind = p_dla_parks_ranked >= p_dla
+
+            true_positives   =  dla_ind &  pdla_ind
+            false_negatives  =  dla_ind & ~pdla_ind
+            true_negatives   = ~dla_ind & ~pdla_ind
+            false_positives  = ~dla_ind &  pdla_ind
+
+            TPR.append( np.sum(true_positives) / ( np.sum(true_positives) + np.sum(false_negatives) ) )
+            FPR.append( np.sum(false_positives) / (np.sum(false_positives) + np.sum(true_negatives)) )
+
+        return TPR, FPR
+
     def make_MAP_comparison(self, catalog):
         '''
         make a comparison between map values and concordance values
@@ -743,6 +810,31 @@ class QSOLoader(object):
         Delta_log_nhis = map_log_nhis - self.dla_catalog.log_nhis[map_model_index > self.sub_dla]
 
         return Delta_z_dlas, Delta_log_nhis
+
+    def make_MAP_hist2d(self, p_thresh = 0.98):
+        '''
+        Make a 2D hist for z_map vs z_true
+
+        p_thresh (float) : p_dlas < p_thresh are not considered to be DLAs
+        '''
+        real_index = self.dla_catalog.real_index # concordance only
+
+        # get corresponding map vals for concordance only
+        # and threshold the p_dlas
+        this_dla_map_model_index = self.dla_map_model_index.copy()
+        this_dla_map_model_index[self.p_dlas < p_thresh] = 0
+        map_model_index  = this_dla_map_model_index[real_index]
+
+        # make sure having at least one DLA, concordance ∩ garnett
+        real_index = real_index[map_model_index > self.sub_dla]
+
+        map_z_dlas   = self.map_z_dlas[real_index, 0, 0]   # assume DLA(1) corresponds to the concordance value
+        map_log_nhis = self.map_log_nhis[real_index, 0, 0]
+
+        true_z_dlas   = self.dla_catalog.z_dlas[map_model_index > self.sub_dla]
+        true_log_nhis = self.dla_catalog.log_nhis[map_model_index > self.sub_dla]
+
+        return map_z_dlas, true_z_dlas, map_log_nhis, true_log_nhis, real_index
 
     def make_MAP_parks_comparison(self, catalog, num_dlas=1, dla_confidence=0.98):
         '''
@@ -2115,4 +2207,4 @@ def search_index_from_another(y, target):
 def make_fig():
     '''this is the size of a spectrum'''
     plt.figure(figsize=(16, 5))
-    
+ 
