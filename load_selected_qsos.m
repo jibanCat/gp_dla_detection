@@ -1,7 +1,9 @@
 % load_selected_qsos.m : load only one quasar for testing the model
 
 % select the thing_ids you want to test the model
-selected_thing_ids = [267231131, 467627896];
+selected_thing_ids = [267231131, 467627896, 290515842, 430536819, 257809711, ...
+    341394135, 78109198, 34953145, 431593999, 526683132, 84523031, 84621480, ...
+    268514930, 66692618, 374107809];
 
 % prior settings
 % specify the learned quasar model to use
@@ -44,10 +46,14 @@ selected_real_index = real_index(selected_quasar_inds);
 % load preprocessed QSOs
 preloaded_qsos = matfile(sprintf('%s/preloaded_qsos', processed_directory(release)));
 
-all_wavelengths    =  preloaded_qsos.all_wavelengths(selected_real_index, :);
-all_flux           =  preloaded_qsos.all_flux(selected_real_index, :);
-all_noise_variance =  preloaded_qsos.all_noise_variance(selected_real_index, :);
-all_pixel_mask     =  preloaded_qsos.all_pixel_mask(selected_real_index, :);
+all_wavelengths    = preloaded_qsos.all_wavelengths;
+all_wavelengths    = all_wavelengths(selected_real_index, :);
+all_flux           = preloaded_qsos.all_flux;
+all_flux           = all_flux(selected_real_index, :);
+all_noise_variance =  preloaded_qsos.all_noise_variance;
+all_noise_variance = all_noise_variance(selected_real_index, :);
+all_pixel_mask     = preloaded_qsos.all_pixel_mask;
+all_pixel_mask     = all_pixel_mask(selected_real_index, :);
 
 clear preloaded_qsos
 
