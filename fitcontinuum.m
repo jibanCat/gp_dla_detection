@@ -132,20 +132,3 @@ d2       = this_noise_variance(~ind_1) + this_omega2(~ind_1);
 this_continuum = cat(1, mu1, this_mu2);
 
 fprintf(' took %0.3fs.\n', toc);
-
-hold on; plot(this_mu); plot(this_mu_mf);plot(this_flux); ylim([-1 5]); hold off;
-
-figure
-hold on;
-plot(this_rest_wavelengths, this_flux);
-plot(this_rest_wavelengths, this_continuum); 
-ylim([-1 5]);
-hold off;
-
-figure
-hold on;
-plot(this_rest_wavelengths, this_continuum); 
-plot(this_rest_wavelengths, this_mu); 
-plot(this_rest_wavelengths, this_mu_mf); 
-ylim([-1 5]);
-hold off;
