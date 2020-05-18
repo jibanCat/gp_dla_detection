@@ -36,8 +36,7 @@
 prev_tau_0 = 0.0023;
 prev_beta  = 3.65;
 
-
-quasar_ind = 2;
+% quasar_ind = 1;
 
 % this line starts the continuum fitting
 tic;
@@ -85,18 +84,7 @@ this_M  =  M_interpolator({this_rest_wavelengths, 1:k});
 this_log_omega = log_omega_interpolator(this_rest_wavelengths);
 this_omega2 = exp(2 * this_log_omega);
 
-
 % set Lyseries absorber redshift for mean-flux suppression
-% To count the effect of Lyman series from higher z,
-% we compute the absorbers' redshifts for all members of the series
-this_lyseries_zs = nan(numel(this_wavelengths), num_forest_lines);
-
-for l = 1:num_forest_lines
-    this_lyseries_zs(:, l) = ...
-    (this_wavelengths - all_transition_wavelengths(l)) / ...
-    all_transition_wavelengths(l);
-end
-
 % apply the lya_absorption after the interpolation because NaN will appear in this_mu
 total_optical_depth = effective_optical_depth(this_wavelengths, ...
     prev_beta, prev_tau_0, z_qso, ...
@@ -109,13 +97,8 @@ lya_absorption = exp(- sum(total_optical_depth, 2) );
 this_mu_mf = this_mu .* lya_absorption;
 this_M_mf  = this_M  .* lya_absorption;
 
-% set another Lya absorber redshift to use in coveriance
-this_lya_zs = ...
-  (this_wavelengths - lya_wavelength) / ...
-   lya_wavelength;
 
-
-% apply the lya_absorption after the interpolation because NaN will appear in this_mu
+% set another Lysieres absorber redshift to use in coveriance
 lya_optical_depth = effective_optical_depth(this_wavelengths, ...
     beta, tau_0, z_qso, ...
     all_transition_wavelengths, all_oscillator_strengths, ...
@@ -131,6 +114,38 @@ this_omega2 = this_omega2 .* this_scaling_factor.^2;
 % p(y | λ, zqso, v, ω, M_nodla) = N(y; μ .* a_lya, A_lya (K + Ω) A_lya + V)
 this_omega2_mf = this_omega2 .* lya_absorption.^2;
 
+% select y1, y2, mu1, mu2, M1, M2, d1, d2
+% 1: Hydrogen absorption region
+% 2: Metal-line region
+ind_1    = this_rest_wavelengths <= lya_wavelength;
+y2       =  this_flux(~ind_1);
+this_mu1 =    this_mu( ind_1);
+this_mu2 =    this_mu(~ind_1);
+this_M1  =     this_M( ind_1, :);
+this_M2  =     this_M(~ind_1, :);
+d1       = this_noise_variance( ind_1) + this_omega2( ind_1);
+d2       = this_noise_variance(~ind_1) + this_omega2(~ind_1);
+
+[mu1, Sigma11] = conditional_mvnpdf_low_rank(y2, ...
+    this_mu1, this_mu2, this_M1, this_M2, d1, d2);
+
+this_continuum = cat(1, mu1, this_mu2);
+
 fprintf(' took %0.3fs.\n', toc);
 
 hold on; plot(this_mu); plot(this_mu_mf);plot(this_flux); ylim([-1 5]); hold off;
+
+figure
+hold on;
+plot(this_rest_wavelengths, this_flux);
+plot(this_rest_wavelengths, this_continuum); 
+ylim([-1 5]);
+hold off;
+
+figure
+hold on;
+plot(this_rest_wavelengths, this_continuum); 
+plot(this_rest_wavelengths, this_mu); 
+plot(this_rest_wavelengths, this_mu_mf); 
+ylim([-1 5]);
+hold off;
