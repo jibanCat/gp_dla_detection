@@ -105,28 +105,8 @@ for i = 1:num_quasars
   rest_noise_variances(i, :) = ...
       interp1(this_rest_wavelengths, this_noise_variance, rest_wavelengths);
   rest_noise_variances(i, :) = rest_noise_variances(i, :) / this_median .^ 2;  %setting up bluward/redwards of restframe txt files
-
-  % normalise the data we put into end model fitting
-  this_norm_flux           = this_flux / this_median;
-  this_norm_noise_variance = this_noise_variance / this_median .^ 2;
-
-  bluewards_flux{i} = this_norm_flux(this_rest_wavelengths < min_lambda & ~this_pixel_mask);
-  bluewards_nv{i}   = this_norm_noise_variance(this_rest_wavelengths < min_lambda & ~this_pixel_mask);
-  redwards_flux{i}  = this_norm_flux(this_rest_wavelengths > max_lambda & ~this_pixel_mask);
-  redwards_nv{i}    = this_norm_noise_variance(this_rest_wavelengths > max_lambda & ~this_pixel_mask);
 end
-bluewards_flux = cell2mat(bluewards_flux);
-bluewards_nv = cell2mat(bluewards_nv);
-redwards_flux = cell2mat(redwards_flux);
-redwards_nv = cell2mat(redwards_nv);
-
-addpath('./offrestfit');
-
-[bluewards_mu, bluewards_sigma] = fitendmodel(bluewards_flux, bluewards_nv);
-[redwards_mu, redwards_sigma] = fitendmodel(redwards_flux, redwards_nv);
-
 clear('all_wavelengths', 'all_flux', 'all_noise_variance', 'all_pixel_mask');
-clear('bluewards_flux', 'bluewards_nv', 'redwards_flux', 'redwards_nv');
 
 % filter out empty spectra
 % note: if you've done this in preload_qsos then skip these lines
@@ -140,6 +120,16 @@ all_lyman_1pzs       = all_lyman_1pzs(:, ~is_empty, :);
 num_quasars = numel(z_qsos);
 
 fprintf('Get rid of empty spectra, num_quasars = %i\n', num_quasars);
+
+% Filter out spectra with redshifts outside the training region
+% for continuum fit, we should select a very low redshift region, e.g., 2.15 - 2.8
+ind = (z_qsos > z_qso_training_min_cut) & (z_qsos < z_qso_training_max_cut);
+fprintf("Filtering %g quasars for redshift\n", length(rest_fluxes) - nnz(ind));
+z_qsos               = z_qsos(ind);
+lya_1pzs             = lya_1pzs(ind, :);
+rest_fluxes          = rest_fluxes(ind, :);
+rest_noise_variances = rest_noise_variances(ind,:);
+all_lyman_1pzs       = all_lyman_1pzs(:, ind, :);
 
 % mask noisy pixels
 ind = (rest_noise_variances > max_noise_variance);
@@ -271,10 +261,9 @@ variables_to_save = {'training_release', 'train_ind', 'max_noise_variance', ...
                      'initial_M', 'initial_log_omega', 'initial_log_c_0', ...
                      'initial_tau_0', 'initial_beta',  'M', 'log_omega', ...
                      'log_c_0', 'log_tau_0', 'log_beta', 'log_likelihood', ...
-                     'minFunc_output', 'bluewards_mu', 'bluewards_sigma', ...
-                     'redwards_mu', 'redwards_sigma'};
+                     'minFunc_output'};
 
-save(sprintf('%s/learned_model_outdata_%s_norm_%d-%d',             ...
+save(sprintf('%s/learned_model_continuum_%s_norm_%d-%d',             ...
              processed_directory(training_release), ...
              training_set_name, ...
 	           normalization_min_lambda, normalization_max_lambda), ...
