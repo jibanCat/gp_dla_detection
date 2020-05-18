@@ -116,9 +116,6 @@ rest_fluxes          = rest_fluxes(~is_empty, :);
 rest_noise_variances = rest_noise_variances(~is_empty, :);
 all_lyman_1pzs       = all_lyman_1pzs(:, ~is_empty, :);
 
-% update num_quasars in consideration
-num_quasars = numel(z_qsos);
-
 fprintf('Get rid of empty spectra, num_quasars = %i\n', num_quasars);
 
 % Filter out spectra with redshifts outside the training region
@@ -130,6 +127,9 @@ lya_1pzs             = lya_1pzs(ind, :);
 rest_fluxes          = rest_fluxes(ind, :);
 rest_noise_variances = rest_noise_variances(ind,:);
 all_lyman_1pzs       = all_lyman_1pzs(:, ind, :);
+
+% update num_quasars in consideration
+num_quasars = numel(z_qsos);
 
 % mask noisy pixels
 ind = (rest_noise_variances > max_noise_variance);
@@ -263,8 +263,9 @@ variables_to_save = {'training_release', 'train_ind', 'max_noise_variance', ...
                      'log_c_0', 'log_tau_0', 'log_beta', 'log_likelihood', ...
                      'minFunc_output'};
 
-save(sprintf('%s/learned_model_continuum_%s_norm_%d-%d',             ...
+save(sprintf('%s/learned_model_continuum_%s_norm_%d-%d_z_%d-%d',             ...
              processed_directory(training_release), ...
              training_set_name, ...
-	           normalization_min_lambda, normalization_max_lambda), ...
+             normalization_min_lambda, normalization_max_lambda, ...
+             z_qso_training_min_cut, z_qso_training_max_cut), ...
      variables_to_save{:}, '-v7.3');
