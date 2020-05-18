@@ -1,12 +1,6 @@
 % set_parameters: sets various parameters for the DLA detection
 % pipeline
 
-%flags for changes
-extrapolate_subdla = 0; %0 = off, 1 = on
-add_proximity_zone = 0;
-integrate          = 1;
-optTag = [num2str(integrate), num2str(extrapolate_subdla), num2str(add_proximity_zone)];
-
 % physical constants
 lya_wavelength = 1215.6701;                   % Lyman alpha transition wavelength  Å
 lyb_wavelength = 1025.7223;                   % Lyman beta  transition wavelength  Å
@@ -26,8 +20,6 @@ observed_wavelengths = ...
 % file loading parameters: this is no longer used.
 loading_min_lambda = 700;                   % range of rest wavelengths to load  Å
 loading_max_lambda = 5000;                  % This maximum is set so we include CIV.
-% The maximum allowed is set so that even if the peak is redshifted off the end, the
-% quasar still has data in the range
 
 % preprocessing parameters
 z_qso_cut      = 2.15;                        % filter out QSOs with z less than this threshold
@@ -36,8 +28,8 @@ min_num_pixels = 400;                         % minimum number of non-masked pix
 
 % normalization parameters
 % I use 1216 is basically because I want integer in my saved filenames
-normalization_min_lambda = 1216 - 40;              % range of rest wavelengths to use   Å
-normalization_max_lambda = 1216 + 40;              %   for flux normalization
+normalization_min_lambda = 1325;              % range of rest wavelengths to use   Å
+normalization_max_lambda = 1390;              %   for flux normalization
 
 % null model parameters
 min_lambda         =  910;                    % range of rest wavelengths to       Å
@@ -54,34 +46,9 @@ minFunc_options =               ...           % optimization options for model f
     struct('MaxIter',     2000, ...
            'MaxFunEvals', 4000);
 
-% DLA model parameters: parameter samples
-num_dla_samples     = 100000;                 % number of parameter samples
-alpha               = 0.9;                    % weight of KDE component in mixture
-uniform_min_log_nhi = 20.0;                   % range of column density samples    [cm⁻²]
-uniform_max_log_nhi = 23.0;                   % from uniform distribution
-fit_min_log_nhi     = 20.0;                   % range of column density samples    [cm⁻²]
-fit_max_log_nhi     = 22.0;                   % from fit to log PDF
-
-% model prior parameters
-prior_z_qso_increase = kms_to_z(30000);       % use QSOs with z < (z_QSO + x) for prior
-
 % instrumental broadening parameters
 width = 3;                                    % width of Gaussian broadening (# pixels)
 pixel_spacing = 1e-4;                         % wavelength spacing of pixels in dex
-
-% DLA model parameters: absorber range and model
-num_lines = 3;                                % number of members of the Lyman series to use
-
-max_z_cut = kms_to_z(3000);                   % max z_DLA = z_QSO - max_z_cut
-max_z_dla = @(wavelengths, z_qso) ...         % determines maximum z_DLA to search
-    min((max(wavelengths) / lya_wavelength - 1) - max_z_cut,...
-    z_qso - max_z_cut);
-
-min_z_cut = kms_to_z(3000);                   % min z_DLA = z_Ly∞ + min_z_cut
-min_z_dla = @(wavelengths, z_qso) ...         % determines minimum z_DLA to search
-    max(min(wavelengths) / lya_wavelength - 1,                          ...
-        observed_wavelengths(lyman_limit, z_qso) / lya_wavelength - 1 + ...
-        min_z_cut);
 
 % Lyman-series array: for modelling the forests of Lyman series
 num_forest_lines = 6;
