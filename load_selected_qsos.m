@@ -1,7 +1,7 @@
 % load_selected_qsos.m : load only one quasar for testing the model
 
 % select the thing_ids you want to test the model
-selected_thing_ids = [175277012, 78109198];
+selected_thing_ids = [267231131, 467627896];
 
 % prior settings
 % specify the learned quasar model to use
