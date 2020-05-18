@@ -75,10 +75,3 @@ log_omega_interpolator = ...
 c_0   = exp(log_c_0);
 tau_0 = exp(log_tau_0);
 beta  = exp(log_beta);
-
-% pre-trained Lyα absorption parameters
-prev_tau_0 = 0.0023;
-prev_beta  = 3.65;
-
-num_forest_lines = 31;
-
