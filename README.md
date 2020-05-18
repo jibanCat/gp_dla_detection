@@ -1,12 +1,20 @@
-DLA detection pipleine for BOSS quasar spectra
+Continuum fit for BOSS quasar spectra
 ==============================================
 
-This code repository contains code to completely reproduce the DLA
-catalog reported in
+This branch uses Garnett (2017)'s GP model design and
+Ho (2020)'s mean-flux suppression to learn GP model.
+
+Data loading and catalog building procedures are the same as Garnett (2017).
+
+Lyman-series are included in both covariance and mean vector.
 
 > R Garnett, S Ho, S Bird, and J Schnedier. Detecting Damped Lyman-α
 > Absorbers with Gaussian Processes. [arXiv:1605.04460
 > [astro-ph.CO]](https://arxiv.org/abs/1605.04460),
+
+> M-F Ho, S Bird, and R Garnett. Detecting Multiple DLAs per
+> Spectrum in SDSS DR12 with Gaussian Processes. [arXiv:2003.11036
+> [astro-ph.CO]](https://arxiv.org/abs/2003.11036),
 
 including all intermediate data products including the Gaussian
 process null model described therein. The provided parameters should
@@ -70,15 +78,15 @@ preprocessing. The additional filters are:
 
 * spectra that have no nonmasked pixels in the range [1310, 1325]
   Angstroms (QSO restframe) are filtered, as they cannot be normalized
-* spectra with fewer than 200 nonmasked pixels in the range [911,
-  1217] Angstroms (QSO restframe) are filtered.
+* spectra with fewer than 400 nonmasked pixels in the range [700,
+  5000] Angstroms (QSO restframe) are filtered.
 
 The preprocessing steps are to:
 
-* truncate spectra to only contain pixels in the range [911, 1217]
+* truncate spectra to only contain pixels in the range [700, 5000]
   Angstroms QSO rest
 * normalize flux and noise variance by dividing by the median flux in
-  the range [1176, 1256] Angstroms QSO rest
+  the range [1325, 1390] Angstroms QSO rest
 
 Relevant parameters in `set_parameters` that can be tweaked if
 desired:
@@ -87,12 +95,12 @@ desired:
     min_num_pixels = 200;                         % minimum number of non-masked pixels
 
     % normalization parameters
-    normalization_min_lambda = 1176;              % range of rest wavelengths to use   Å
-    normalization_max_lambda = 1256;              %   for flux normalization
+    normalization_min_lambda = 1325;              % range of rest wavelengths to use   Å
+    normalization_max_lambda = 1390;              %   for flux normalization
 
     % file loading parameters
-    loading_min_lambda = 910;                     % range of rest wavelengths to load  Å
-    loading_max_lambda = 1217;
+    loading_min_lambda = 700;                     % range of rest wavelengths to load  Å
+    loading_max_lambda = 5000;
 
 When ready, the MATLAB code to preload the spectra is:
 
@@ -161,7 +169,7 @@ desired:
     max_lambda         =    3000;                 %   model
     dlambda            =    0.25;                 % separation of wavelength grid      Å
     k                  = 20;                      % rank of non-diagonal contribution
-    max_noise_variance = 4^2;                     % maximum pixel noise allowed during model training
+    max_noise_variance = 1^2;                     % maximum pixel noise allowed during model training
 
     % optimization parameters
     initial_c     = 0.1;                          % initial guess for c
@@ -180,135 +188,58 @@ is:
 The learned qso model is stored in
 `data/[training_release]/processed/learned_qso_model_[training_set_name].mat`.
 
-We also need to specify a set of DLA parameter samples for the DLA
-model. This is handled by the `generate_dla_samples` script.
-
-Relevant parameters in `set_parameters` that can be tweaked if
-desired:
-
-    % DLA model parameters: parameter samples
-    num_dla_samples     = 100000;                 % number of parameter samples
-    alpha               = 0.9;                    % weight of KDE component in mixture
-    uniform_min_log_nhi = 20.0;                   % range of column density samples    [cm⁻²]
-    uniform_max_log_nhi = 23.0;                   % from uniform distribution
-    fit_min_log_nhi     = 20.0;                   % range of column density samples    [cm⁻²]
-    fit_max_log_nhi     = 22.0;                   % from fit to log PDF
-
-When ready, the MATLAB code to generate the DLA model parameter
-samples is:
-
-    training_release  = 'dr12q';
-    generate_dla_samples;
-
-Processing spectra for DLA detection
+Processing spectra for continuum fit
 ------------------------------------
 
-Finally, we may use our built model to compute the posterior
-probability of containing a DLA along the line of sight as described
-in the paper above.
+The current fit continuum script only supports user to input thing_ids
+into the model.
 
-The processing code requires the C helper function `voigt.c` to be
-compiled to compute Voigt profiles quickly from MATLAB. This requires
-the [`libcerf`](http://apps.jcns.fz-juelich.de/doku/sc/libcerf)
-library to be installed. This is available
-from [Homebrew-science](https://github.com/Homebrew/homebrew-science)
-for OS X users. The code for this is:
+For example, to load `thing_id = 84523031` quasar,
 
-    % in MATLAB
-    mex voigt.c -lcerf
+    % select thing_ids to load into the environment
+    selected_thing_ids = [84523031];
 
-To perform a DLA search, we must specify a few things first. First, we
-must specify which quasar emission model to use; to select the one
-learned above, we may use
+    % run the loading script to load only the selected quasars
+    load_selected_qsos;
 
-    % specify the learned quasar model to use
-    training_release  = 'dr12q';
-    training_set_name = 'dr9q_minus_concordance';
+The following variables will be loaded into the environment:
 
-(the code will attempt to load the model from a file called
-`data/[training_release]/processed/learned_qso_model_[training_set_name].mat`.)
+    % Parameters:
+    % ----
+    % this_rest_wavelengths : λ
+    % this_flux             : y
+    % this_noise_variance   : v
+    % this_omega2           : ω
+    % this_mu               : μ
+    % this_M                : M, K = MM'
 
-Next, we must specify which spectra to use to compute the DLA model
-prior Pr(M_DLA). Here we select all spectra that are:
+The fitting continuum routine is done in `fitcontinuum.m`. To
+run the first quasar in the `selected_thing_ids`, do
 
-* in DR9
-* in the DR9 Lyman-alpha forest catalog, and
-* not filtered by our filtering steps above.
+    % fit the continuum on the given quasar
+    quasar_ind = 1;
+    fitcontinuum;
 
-These choices can be realized with:
+The script will call `conditional_mvnpdf_low_rank` to build a
+conditional GP and get:
 
-    % specify the spectra to use for computing the DLA existence prior
-    dla_catalog_name  = 'dr9q_concordance';
-    prior_ind = ...
-        [' prior_catalog.in_dr9 & ' ...
-         ' prior_catalog.los_inds(dla_catalog_name) & ' ...
-         '(prior_catalog.filter_flags == 0)'];
+    % this_continuum (array) : continuum fit with the same range as this_rest_wavelengths
+    % Sigma11 (matrix)       : the covariance matrix at Lyman forest region
 
-Next, we must specify which spectra to search for DLAs. Here we use
-all DR12Q spectra that were not filtered:
+The description for conditional GP is here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions
 
-    % specify the spectra to process
-    release = 'dr12q';
-    test_set_name = 'dr12q';
-    test_ind = '(catalog.filter_flags == 0)';
+To plot the continuum fit, type
 
-Relevant parameters in `set_parameters` that can be tweaked if
-desired, including function handles specifying the range of z_DLA to
-search:
+    % plot this_continuum with uncertainty (only diagonal terms in the covariance)
+    plot_fitcontinuum;
 
-    % model prior parameters
-    prior_z_qso_increase = kms_to_z(30000);       % use QSOs with z < (z_QSO + x) for prior
+To wrap things up, if I want to plot all of my fits:
 
-    % instrumental broadening parameters
-    width = 3;                                    % width of Gaussian broadening (# pixels)
-    pixel_spacing = 1e-4;                         % wavelength spacing of pixels in dex
+    % plot all selected thing_ids
+    for quasar_ind = 1:numel(selected_thing_ids)
+        fitcontinuum;
+        plot_fitcontinuum;
+    end
 
-    % DLA model parameters: absorber range and model
-    num_lines = 3;                                % number of members of the Lyman series to use
-
-    max_z_cut = kms_to_z(3000);                   % max z_DLA = z_QSO - max_z_cut
-    max_z_dla = @(wavelengths, z_qso) ...         % determines maximum z_DLA to search
-        (max(wavelengths) / lya_wavelength - 1) - max_z_cut;
-
-    min_z_cut = kms_to_z(3000);                   % min z_DLA = z_Ly∞ + min_z_cut
-    min_z_dla = @(wavelengths, z_qso) ...         % determines minimum z_DLA to search
-    max(min(wavelengths) / lya_wavelength - 1,                          ...
-        observed_wavelengths(lyman_limit, z_qso) / lya_wavelength - 1 + ...
-        min_z_cut);
-
-This script will write the results in
-`data/[release]/processed_qsos_[test_set_name].mat`.
-
-The complete code for processing the spectra in MATLAB is:
-
-    % produce catalog searching [Lyoo + 3000 km/s, Lya - 3000 km/s]
-    set_parameters;
-
-    % specify the learned quasar model to use
-    training_release  = 'dr12q';
-    training_set_name = 'dr9q_minus_concordance';
-
-    % specify the spectra to use for computing the DLA existence prior
-    dla_catalog_name  = 'dr9q_concordance';
-	prior_ind = ...
-        [' prior_catalog.in_dr9 & '             ...
-         '(prior_catalog.filter_flags == 0) & ' ...
-         ' prior_catalog.los_inds(dla_catalog_name)'];
-
-    % specify the spectra to process
-    release = 'dr12q';
-    test_set_name = 'dr12q';
-    test_ind = '(catalog.filter_flags == 0)';
-
-    % process the spectra
-    process_qsos;
-
-Finally, we may create an ASCII catalog of the results if desired with
-`generate_ascii_catalog`, e.g.:
-
-    set_parameters;
-    training_release  = 'dr12q';
-    release = 'dr12q';
-    test_set_name = 'dr12q';
-
-    generate_ascii_catalog;
+TODO: create another repo for continuum fitting and build a python class to
+do it from .fits file directly. The only thing we need is the learning script.
