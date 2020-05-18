@@ -47,13 +47,9 @@ function [mu1, Sigma11] = conditional_mvnpdf_low_rank(y2, mu1, mu2, M1, M2, d1, 
   K22_inv_y       = D2_inv_y2 - D2_inv_M2 * (C2 * y2);
   K22_inv_Sigma21 = d2_inv .* (M2 * M1') - D2_inv_M2 * (C2 * (M2 * M1'));
 
-  % update M1 and M2 with d
-  S1 = M1 + d1;
-  S2 = M2 + d2;
-
   % μ1' = μ1 + Σ12 Σ22^-1 (y2 - μ2)
   mu1 = mu1 + ((M1 * M2') * K22_inv_y);
   
   % Σ11' = Σ11 - Σ12 Σ22^-1 Σ21
-  Sigma11 = S1 * S1' - (M1 * M2') * K22_inv_Sigma21;
+  Sigma11 = diag(d1) + M1 * M1' - (M1 * M2') * K22_inv_Sigma21;
 end
