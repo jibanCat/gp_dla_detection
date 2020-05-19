@@ -1256,12 +1256,14 @@ class QSOLoaderZ(QSOLoader):
     def __init__(self, preloaded_file="preloaded_qsos.mat", catalogue_file="catalog.mat", 
             learned_file="learned_qso_model_dr9q_minus_concordance.mat", processed_file="processed_qsos_dr12q.mat",
             dla_concordance="dla_catalog", los_concordance="los_catalog", sample_file="dla_samples.mat",
-            occams_razor=False, small_file = True):
+            occams_razor=False, small_file = True, suppressed=False):
         self.preloaded_file = h5py.File(preloaded_file, 'r')
         self.catalogue_file = h5py.File(catalogue_file, 'r')
         self.learned_file   = h5py.File(learned_file,   'r')
         self.processed_file = h5py.File(processed_file, 'r')
         self.sample_file    = h5py.File(sample_file, 'r')
+
+        self.suppressed = suppressed
 
         # test_set prior inds : organise arrays into the same order using selected test_inds
         self.test_ind = self.processed_file['test_ind'][0, :].astype(np.bool) #size: (num_qsos, )
@@ -1269,13 +1271,22 @@ class QSOLoaderZ(QSOLoader):
 
         # z code specific vars
         self.z_map     = self.processed_file['z_map'][0, :]
-        self.z_qsos    = self.processed_file['z_qsos'][0, :]
-        self.z_qsos    = self.z_qsos[:len(self.z_map)]
+        try:
+            self.z_qsos    = self.processed_file['z_qsos'][0, :]
+            self.z_qsos    = self.z_qsos[:len(self.z_map)]
+        except KeyError as e:
+            print(e)
+            self.z_qsos = self.processed_file['z_true'][0, :]
         # self.snrs      = self.processed_file['signal_to_noise'][0, :]
         
         # memory free loading; using disk I/O to load sample posteriors
-        self.sample_log_posteriors = self.processed_file[
-            'sample_log_posteriors']
+        try:
+            self.sample_log_posteriors = self.processed_file[
+                'sample_log_posteriors']
+        except KeyError as e:
+            print(e)
+            self.sample_log_posteriors = self.processed_file[
+                'sample_log_posteriors_no_dla']
 
         if small_file:
             # note the assumption here is we have samples from 1 ~ num_quasars
@@ -1326,15 +1337,30 @@ class QSOLoaderZ(QSOLoader):
 
         self.nan_inds = nan_inds
 
-        # store learned GP models
-        self.GP = GPLoaderZ(
-            self.learned_file['rest_wavelengths'][:, 0],
-            self.learned_file['mu'][:, 0],
-            self.learned_file['M'][()].T,
-        )
+        if suppressed:
+            # store learned GP models
+            self.GP = GPLoader(
+                self.learned_file['rest_wavelengths'][:, 0],
+                self.learned_file['mu'][:, 0],
+                self.learned_file['M'][()].T,
+                self.learned_file['log_tau_0'][0, 0],
+                self.learned_file['log_beta'][0, 0],
+                self.learned_file['log_c_0'][0, 0],
+                self.learned_file['log_omega'][:, 0])
+        else:
+            # store learned GP models
+            self.GP = GPLoaderZ(
+                self.learned_file['rest_wavelengths'][:, 0],
+                self.learned_file['mu'][:, 0],
+                self.learned_file['M'][()].T,
+            )
 
         # loading DLA samples for plotting z_true comparing to marginalised likelihoods
-        self.offset_samples_qso = self.processed_file['offset_samples_qso'][:, 0]
+        try:
+            self.offset_samples_qso = self.processed_file['offset_samples_qso'][:, 0]
+        except KeyError as e:
+            print(e)
+            self.offset_samples_qso = self.sample_file['offset_samples_qso'][:, 0]
 
     @staticmethod
     def find_large_delta_z(z_map, z_true, delta_z):
@@ -1363,11 +1389,11 @@ class QSOLoaderZ(QSOLoader):
         # make a standardized fig size for publication
         plt.figure(figsize=(8, 8))
 
-        plt.scatter(self.z_map[~ind], self.z_true[~ind], alpha=0.03)
+        plt.scatter(self.z_map[~ind], self.z_true[~ind], alpha=0.6)
         
         plt.scatter(self.z_map[ind], self.z_true[ind],
             color="red",
-            label="z_delta > {:.2g}".format(delta_z), alpha=0.03)
+            label="z_delta > {:.2g}".format(delta_z), alpha=0.6)
         print("miss z estimate : {:.2g}%".format(ind.sum() / ind.shape[0] * 100))
         print("index with larger than delta_z:", np.where(~self.nan_inds)[0][ind] )
 
@@ -1486,6 +1512,11 @@ class QSOLoaderZ(QSOLoader):
         # for building GP model
         rest_wavelengths = self.GP.rest_wavelengths
         this_mu          = self.GP.mu
+        if suppressed:
+            # count the effective optical depth from members in Lyman series
+            scale_factor = self.total_scale_factor(
+                self.GP.tau_0_kim, self.GP.beta_kim, self.z_qsos[nspec], self.GP.rest_wavelengths, num_lines=num_forest_lines)
+            this_mu = this_mu * scale_factor
 
         # construct the uncertainty, diag(K) + Omega + V
         # build covariance matrix
@@ -1505,6 +1536,16 @@ class QSOLoaderZ(QSOLoader):
         this_k = np.diag(K)
 
         this_error = this_k[ind] + this_v
+
+        # add absorption noise
+        if suppressed:
+            omega2 = np.exp(2 * self.GP.log_omega)
+            scale_factor = self.total_scale_factor(
+                np.exp(self.GP.log_tau_0), np.exp(self.GP.log_beta),
+                self.z_qsos[nspec], self.GP.rest_wavelengths, num_lines=num_forest_lines)
+            omega2 = omega2 * (1 - scale_factor + np.exp(self.GP.log_c_0))**2
+
+            this_error += omega2[ind]
 
         # plt.figure(figsize=(16, 5))
         if new_fig:
