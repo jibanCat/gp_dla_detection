@@ -142,12 +142,16 @@ this_p_dlas              = zeros(length(z_list), 1);
 % this is just an array allow you to select a range
 % of quasars to run
 quasar_ind = 1;
-try
-    load(['./checkpointing/curDLA_', optTag, '.mat']); %checkmarking code
-catch ME
-    0;
+% I prefer to split qso_ind into pieces to run. So checkpoint will interrupt the workflow
+if exist('qso_ind', 'var') == 0
+    try
+        load(['./checkpointing/curDLA_', optTag, '.mat']); %checkmarking code
+    catch ME
+        0;
+    end
+else
+    q_ind_start = quasar_ind;
 end
-q_ind_start = quasar_ind;
 
 % catch the exceptions
 all_exceptions = false(num_quasars, 1);
