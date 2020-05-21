@@ -39,7 +39,7 @@ function [f, g] = objective(x, centered_rest_fluxes, lya_1pzs, ...
   dlog_tau_0 = 0;
   dlog_beta  = 0;
 
-  parfor i = 1:num_quasars
+  for i = 1:num_quasars
     ind = (~isnan(centered_rest_fluxes(i, :)));
 
     % Apr 12: directly pass z_qsos in the argument since we don't want
@@ -52,15 +52,10 @@ function [f, g] = objective(x, centered_rest_fluxes, lya_1pzs, ...
                         rest_noise_variances(i, ind)', M(ind, :), omega2(ind), ...
                         c_0, tau_0, beta, num_forest_lines, all_transition_wavelengths, ...
                         all_oscillator_strengths, zqso_1pz);
-    % Some shenanigans to allow matlab's reduction variables to work.
-    this_dM_pad = zeros(size(M));
-    this_dM_pad(ind,:) = this_dM;
-    this_log_omega_pad = zeros(size(log_omega));
-    this_log_omega_pad(ind) = this_dlog_omega;
 
     f               = f               + this_f;
-    dM              = dM              + this_dM_pad;
-    dlog_omega      = dlog_omega      + this_log_omega_pad;
+    dM(ind, :)      = dM(ind, :)      + this_dM;
+    dlog_omega(ind) = dlog_omega(ind) + this_dlog_omega;
     dlog_c_0        = dlog_c_0        + this_dlog_c_0;
     dlog_tau_0      = dlog_tau_0      + this_dlog_tau_0;
     dlog_beta       = dlog_beta       + this_dlog_beta;
