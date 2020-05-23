@@ -536,7 +536,7 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         log_posteriors_dla(quasar_ind));
 
     fprintf(' took %0.3fs. (z_map = %0.4f)\n', toc,z_map(quasar_ind));
-    if mod(quasar_ind, 50) == 0
+    if mod(quasar_ind, 100) == 0
         save(['./checkpointing/curDLA_', optTag, '.mat'], 'log_posteriors_dla_sub', 'log_posteriors_dla_sup', 'log_posteriors_dla', 'log_posteriors_no_dla', 'z_true', 'dla_true', 'quasar_ind', 'quasar_num',...
 'used_z_dla', 'nhi_samples', 'offset_samples_qso', 'offset_samples', 'z_map', 'signal_to_noise', 'z_dla_map', 'n_hi_map');
     end
