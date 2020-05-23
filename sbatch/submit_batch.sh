@@ -5,7 +5,7 @@
 
 quasar_start_ind=150001
 quasar_end_ind=160000
-chunk=100
+chunk=50
 
 num_quasars=$(((quasar_end_ind - quasar_start_ind + 1)/chunk))
 
