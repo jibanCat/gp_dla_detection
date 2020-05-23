@@ -15,7 +15,7 @@ num_quasars=$(((quasar_end_ind - quasar_start_ind + 1)/chunk))
 for ((i=1; i <= $num_quasars; i++ ));
 do
     qso_ind_start=$((quasar_start_ind + (i - 1) * chunk))
-    qso_ind_end=$((quasar_start_ind +  i      * chunk - 1))
+    qso_ind_end=$((quasar_start_ind +  i      * chunk))   # my saving condition in process_qsos.m has +1 diff
     echo "checking processed file ..."
 
     file = "${base_directory}${processed_prefix}${qso_ind_start}-${qso_ind_end}${processed_filename}"
