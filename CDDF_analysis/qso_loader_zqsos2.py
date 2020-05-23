@@ -1,16 +1,5 @@
 '''
-% save results
-variables_to_save = {'training_release', 'training_set_name', ...
-    'dla_catalog_name', 'release', ...
-    'test_set_name', 'test_ind', 'prior_z_qso_increase', ...
-    'max_z_cut', 'num_lines', 'min_z_dlas', 'max_z_dlas', ... % you need to save DLA search length to compute CDDF
-    'sample_log_posteriors_no_dla', 'sample_log_posteriors_dla', ...
-    'sample_log_posteriors_dla_sub', 'sample_log_posteriors_dla_sup', ...
-    'log_posteriors_no_dla', 'log_posteriors_dla', ...
-    'log_posteriors_dla_sub', 'log_posteriors_dla_sup', ...
-    'model_posteriors', 'p_no_dlas', ...
-    'p_dlas', 'z_map', 'z_true', 'dla_true', 'z_dla_map', 'n_hi_map', 'log_nhi_map',...
-    'signal_to_noise', 'all_thing_ids'};
+QSOLoader for plotting relevant plots for DLA detections combine with z-estimation
 '''
 
 import numpy as np
@@ -26,15 +15,11 @@ class QSOLoaderZDLAs(QSOLoader):
     '''
     A specific QSOLoader for Z estimation + DLA statistics
     '''
-    # include the normaliser since it is not in the processed file
-    normalization_min_lambda = 1325                 # range of rest wavelengths to use   Å
-    normalization_max_lambda = 1390                 #   for flux normalization
-
-
     def __init__(self, preloaded_file="preloaded_qsos.mat", catalogue_file="catalog.mat", 
             learned_file="learned_qso_model_dr9q_minus_concordance.mat", processed_file="processed_qsos_dr12q.mat",
             dla_concordance="dla_catalog", los_concordance="los_catalog", sample_file="dla_samples.mat",
-            occams_razor=False, small_file = True):
+            occams_razor=False, small_file = True,
+            normalization_min_lambda=1176, normalization_max_lambda=1256):
         self.preloaded_file = h5py.File(preloaded_file, 'r')
         self.catalogue_file = h5py.File(catalogue_file, 'r')
         self.learned_file   = h5py.File(learned_file,   'r')
@@ -42,6 +27,9 @@ class QSOLoaderZDLAs(QSOLoader):
         self.sample_file    = h5py.File(sample_file, 'r')
 
         self.occams_razor = occams_razor
+
+        self.normalization_min_lambda = normalization_min_lambda   # range of rest wavelengths to use   Å
+        self.normalization_max_lambda = normalization_max_lambda   #   for flux normalization
 
         # load processed data
         self.model_posteriors = self.processed_file['model_posteriors'][()].T
@@ -63,18 +51,22 @@ class QSOLoaderZDLAs(QSOLoader):
             self.test_ind[ind] = False
 
         # z code specific vars
-        self.z_map     = self.processed_file['z_map'][0, :]
-        self.z_true    = self.processed_file['z_true'][0, :]
-        self.dla_true  = self.processed_file['dla_true'][0, :]
-        self.z_dla_map = self.processed_file['z_dla_map'][0, :]
-        self.n_hi_map  = self.processed_file['n_hi_map'][0, :]
-        self.snrs      = self.processed_file['signal_to_noise'][0, :]
+        self.z_map         = self.processed_file['z_map'][0, :]
+        self.z_true        = self.processed_file['z_true'][0, :]
+        self.dla_true      = self.processed_file['dla_true'][0, :]
+        self.all_z_dlas    = self.processed_file['z_dla_map'][0, :]
+        self.all_log_nhis  = self.processed_file['log_nhi_map'][0, :]
+        self.snrs          = self.processed_file['signal_to_noise'][0, :]
         
         # memory free loading; using disk I/O to load sample posteriors
-        self.sample_log_posteriors_no_dla = self.processed_file[
-            'sample_log_posteriors_no_dla']
-        self.sample_log_posteriors_dla    = self.processed_file[
-            'sample_log_posteriors_dla']
+        try:
+            self.sample_log_posteriors_no_dla = self.processed_file[
+                'sample_log_posteriors_no_dla']
+            self.sample_log_posteriors_dla    = self.processed_file[
+                'sample_log_posteriors_dla']
+        except KeyError as e:
+            print(e)
+            print("[Warning] you are loading a truncated file without sample posteriors.")
 
         # store thing_ids based on test_set prior inds
         self.thing_ids = self.catalogue_file['thing_ids'][0, :].astype(np.int)
@@ -93,7 +85,7 @@ class QSOLoaderZDLAs(QSOLoader):
         self.z_qsos     = self.catalogue_file['z_qsos'][0, :]
         self.snrs_cat   = self.catalogue_file['snrs'][0, :]
 
-        self.z_qsos = self.z_qsos[self.test_ind]
+        self.z_qsos     = self.z_qsos[self.test_ind]
         self.snrs_cat   = self.snrs_cat[self.test_ind]
 
         # [Occams Razor] Update model posteriors with an additional occam's razor
@@ -103,7 +95,7 @@ class QSOLoaderZDLAs(QSOLoader):
             self.p_dlas    = self.model_posteriors[:, 1:].sum(axis=1)
             self.p_no_dlas = self.model_posteriors[:, :1].sum(axis=1)
 
-        # build a MAP number of DLAs array
+        # build a MAP number of DLAs array- the number of DLA with the largest posteriors.
         # construct a reference array of model_posteriors in Roman's catalogue for computing ROC curve
         multi_p_dlas    = self.model_posteriors # shape : (num_qsos, 2 + num_dlas)
 
@@ -129,11 +121,11 @@ class QSOLoaderZDLAs(QSOLoader):
         self.snrs_cat         = self.snrs_cat[~nan_inds]
         self.snrs             = self.snrs[~nan_inds]
 
-        self.z_map     = self.z_map[~nan_inds]
-        self.z_true    = self.z_true[~nan_inds]
-        self.dla_true  = self.dla_true[~nan_inds]
-        self.z_dla_map = self.z_dla_map[~nan_inds]
-        self.n_hi_map  = self.n_hi_map[~nan_inds]
+        self.z_map         = self.z_map[~nan_inds]
+        self.z_true        = self.z_true[~nan_inds]
+        self.dla_true      = self.dla_true[~nan_inds]
+        self.all_z_dlas    = self.all_z_dlas[~nan_inds]
+        self.all_log_nhis  = self.all_log_nhis[~nan_inds]
 
         self.nan_inds = nan_inds
         assert np.any( np.isnan( multi_p_dlas )) == False
