@@ -18,10 +18,10 @@ do
     qso_ind_end=$((quasar_start_ind +  i      * chunk))   # my saving condition in process_qsos.m has +1 diff
     echo "checking processed file ..."
 
-    file = "${base_directory}${processed_prefix}${qso_ind_start}-${qso_ind_end}${processed_filename}"
+    file="${base_directory}${processed_prefix}${qso_ind_start}-${qso_ind_end}${processed_filename}"
 
     # check if the processed file is in the directory
-    if test -f "$file"
+    if [ -f "$file" ]
     then
         echo "$file found!"
     else
