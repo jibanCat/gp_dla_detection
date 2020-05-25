@@ -40,7 +40,8 @@ def mat_combine(processed_files: List, out_filename: str, chunk_size: int,
     # which means you don't have posterior density but you have 
     if small_file:
         keys_to_append = [key for key in keys_to_append if 
-            "sample_log_" not in key and "base_sample_inds" not in key]
+            ("sample_log_" not in key and "base_sample_inds" not in key
+            and "min_z_dlas" not in key and "min_z_dlas" in key)]
 
     # create a new h5 file to append
     out = h5py.File(out_filename, 'w')
@@ -50,7 +51,8 @@ def mat_combine(processed_files: List, out_filename: str, chunk_size: int,
         if i == 0: # copy entire dataset in the first occurrence
             for key in f.keys():
                 if small_file:
-                    if "sample_log_" in key or "base_sample_inds" in key:
+                    if ("sample_log_" in key or "base_sample_inds" in key
+                            or "min_z_dlas" in key or "max_z_dlas" in key):
                         continue
                 out.create_dataset(
                     key, shape=f[key].shape, maxshape=f[key].shape[:-1] + (None, ), dtype=f[key].dtype)
@@ -93,7 +95,8 @@ def save2mat73(filename, out_filename, small_file=False, dla_nhi_cut=False, samp
 
     for key in f.keys():
         if small_file:
-            if "sample_log_" in key or "base_sample_inds" in key:
+            if ("sample_log_" in key or "base_sample_inds" in key
+                    or "min_z_dlas" in key or "max_z_dlas" in key):
                 continue
         processed_file[u'{}'.format(key)] = np.transpose( f[key][()] )
 
@@ -130,7 +133,8 @@ def save2mat73_zpatch(filename, catalog_file, out_filename, small_file=False, sn
     for key in f.keys():
         # if you want small file then you don't want every samples per spectrum
         if small_file:
-            if "sample_log_" in key or "base_sample_inds" in key:
+            if ("sample_log_" in key or "base_sample_inds" in key
+                    or "min_z_dlas" in key or "max_z_dlas" in key):
                 continue
         # modify arrays based on the filter_flags
         if f[key].shape[-1] == size:
