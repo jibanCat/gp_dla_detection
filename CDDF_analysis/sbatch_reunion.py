@@ -39,9 +39,10 @@ def mat_combine(processed_files: List, out_filename: str, chunk_size: int,
     # this happens if you don't need the sampling results per spec,
     # which means you don't have posterior density but you have 
     if small_file:
-        keys_to_append = [key for key in keys_to_append if 
-            ("sample_log_" not in key and "base_sample_inds" not in key
-            and "min_z_dlas" not in key and "min_z_dlas" in key)]
+        conds = ["sample_log_", "base_sample_inds", "min_z_dlas", "max_z_dlas"]
+        check_conds = lambda key : any([cond in key for cond in conds])
+
+        keys_to_append = [key for key in keys_to_append if not check_conds(key)]
 
     # create a new h5 file to append
     out = h5py.File(out_filename, 'w')
@@ -51,8 +52,7 @@ def mat_combine(processed_files: List, out_filename: str, chunk_size: int,
         if i == 0: # copy entire dataset in the first occurrence
             for key in f.keys():
                 if small_file:
-                    if ("sample_log_" in key or "base_sample_inds" in key
-                            or "min_z_dlas" in key or "max_z_dlas" in key):
+                    if check_conds(key):
                         continue
                 out.create_dataset(
                     key, shape=f[key].shape, maxshape=f[key].shape[:-1] + (None, ), dtype=f[key].dtype)
@@ -93,10 +93,13 @@ def save2mat73(filename, out_filename, small_file=False, dla_nhi_cut=False, samp
 
     processed_file = {}
 
+    # small file checking conditions, discard vars if they are in this list
+    conds = ["sample_log_", "base_sample_inds", "min_z_dlas", "max_z_dlas"]
+    check_conds = lambda key : any([cond in key for cond in conds])
+
     for key in f.keys():
         if small_file:
-            if ("sample_log_" in key or "base_sample_inds" in key
-                    or "min_z_dlas" in key or "max_z_dlas" in key):
+            if check_conds(key):
                 continue
         processed_file[u'{}'.format(key)] = np.transpose( f[key][()] )
 
@@ -111,6 +114,10 @@ def save2mat73_zpatch(filename, catalog_file, out_filename, small_file=False, sn
         model_posteriors = [ p_no_dlas, p_lls, p_dla_1, p_dla_2, p_dla_3, ... ]
     '''
     import hdf5storage
+
+    # small file checking conditions, discard vars if they are in this list
+    conds = ["sample_log_", "base_sample_inds", "min_z_dlas", "max_z_dlas"]
+    check_conds = lambda key : any([cond in key for cond in conds])
 
     f = h5py.File(filename, 'r')
     catalog = h5py.File(catalog_file, 'r')
@@ -133,8 +140,7 @@ def save2mat73_zpatch(filename, catalog_file, out_filename, small_file=False, sn
     for key in f.keys():
         # if you want small file then you don't want every samples per spectrum
         if small_file:
-            if ("sample_log_" in key or "base_sample_inds" in key
-                    or "min_z_dlas" in key or "max_z_dlas" in key):
+            if check_conds(key):
                 continue
         # modify arrays based on the filter_flags
         if f[key].shape[-1] == size:
