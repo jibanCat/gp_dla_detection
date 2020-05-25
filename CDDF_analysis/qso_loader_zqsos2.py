@@ -157,6 +157,79 @@ class QSOLoaderZDLAs(QSOLoader):
         self.log_nhi_samples    = self.sample_file['log_nhi_samples'][:, 0]
         self.offset_samples     = self.sample_file['offset_samples'][:, 0]
 
+    def make_ROC(self, catalog, occams_razor=1):
+        '''
+        Make a ROC curve with a given `catalog`, which must contains (real_index, real_index_los)
+        '''
+        dla_ind = np.in1d( catalog.real_index_los, catalog.real_index ) # boolean array, same size
+
+        # use log_posteriors_dla directly to avoid numerical underflow
+        log_posteriors_dla    = self.processed_file['log_posteriors_dla'][0, :]       - np.log(occams_razor)
+        log_posteriors_no_dla = self.processed_file['log_posteriors_no_dla'][0, :]
+
+        log_posteriors_dla = logsumexp(log_posteriors_dla, axis=0)
+
+        # filtering out ~nan_inds
+        log_posteriors_dla    = log_posteriors_dla[~self.nan_inds]
+        log_posteriors_no_dla = log_posteriors_no_dla[~self.nan_inds]
+
+        # query the corresponding index in the catalog
+        log_posteriors_dla    = log_posteriors_dla[catalog.real_index_los]
+        log_posteriors_no_dla = log_posteriors_no_dla[catalog.real_index_los]
+
+        odds_dla_no_dla = log_posteriors_dla - log_posteriors_no_dla # log odds
+
+        rank_idx = np.argsort( odds_dla_no_dla ) # small odds -> large odds
+        assert log_posteriors_dla[ rank_idx[0] ] < log_posteriors_dla[ rank_idx[-1] ]
+
+        # re-order every arrays based on the rank
+        dla_ind = dla_ind[ rank_idx ]
+        odds_dla_no_dla = odds_dla_no_dla[rank_idx]
+
+        TPR = []
+        FPR = []
+
+        for odd in odds_dla_no_dla:
+            odd_ind = odds_dla_no_dla >= odd
+            
+            true_positives   =  dla_ind &  odd_ind
+            false_negatives  =  dla_ind & ~odd_ind
+            true_negatives   = ~dla_ind & ~odd_ind
+            false_positives  = ~dla_ind &  odd_ind
+
+            TPR.append( np.sum(true_positives) / ( np.sum(true_positives) + np.sum(false_negatives) ) )
+            FPR.append( np.sum(false_positives) / (np.sum(false_positives) + np.sum(true_negatives)) )
+
+        return TPR, FPR
+
+    def make_MAP_comparison(self, catalog):
+        '''
+        make a comparison between map values and concordance values
+        
+        This is (z_dla_concordance - map_z_dla | concordance ∩ garnett) and
+                (log_nhi_concordance - log_nhi | concordance ∩ garnett)
+        which means we only consider the difference has overlaps between concordance and ours catalogue
+        '''
+        # map values array size: (num_qsos, model_DLA(n), num_dlas)
+        # use the real_index vals stored in dla_catalog attribute and 
+        # loop over the real_index of self.map_values while at the same time
+        # get the (MAP_values | DLA(n)) using self.dla_map_model_index
+        real_index       = self.dla_catalog.real_index # concordance only
+
+        # get corresponding map vals for concordance only
+        map_model_index  = self.dla_map_model_index[real_index]
+        
+        # make sure having at least one DLA, concordance ∩ garnett
+        real_index = real_index[map_model_index > self.sub_dla]
+        
+        map_z_dlas   = self.all_z_dlas[real_index]
+        map_log_nhis = self.all_log_nhis[real_index]
+        
+        Delta_z_dlas   = map_z_dlas   - self.dla_catalog.z_dlas[map_model_index > self.sub_dla]
+        Delta_log_nhis = map_log_nhis - self.dla_catalog.log_nhis[map_model_index > self.sub_dla]
+
+        return Delta_z_dlas, Delta_log_nhis
+
     @staticmethod
     def find_large_delta_z(z_map, z_true, delta_z):
         '''
