@@ -1,7 +1,7 @@
 # check if we have already got the processed file,
 # if not, re-submit the job
 
-base_directory="data/dr12q/processed/"
+base_directory="../data/dr12q/processed/"
 
 processed_prefix="processed_qsos_zqsos_sbird_dr12q-100_"
 processed_filename="_norm_1176-1256.mat"
@@ -26,9 +26,9 @@ do
         echo "$file found!"
     else
         echo "$file missing, re-submit"
-        # bash submit_gp_zqsos2.sh $qso_ind_start $qso_ind_end `pwd`
+        echo bash submit_gp_zqsos2.sh $qso_ind_start $((qso_ind_end-1)) `pwd`
 
         # biocluster would reject my MATLAB parallel jobs if submitting a sequence of jobs too fast
-        sleep 5
+        # sleep 5
     fi
 done
