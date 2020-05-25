@@ -167,8 +167,6 @@ class QSOLoaderZDLAs(QSOLoader):
         log_posteriors_dla    = self.processed_file['log_posteriors_dla'][0, :]       - np.log(occams_razor)
         log_posteriors_no_dla = self.processed_file['log_posteriors_no_dla'][0, :]
 
-        log_posteriors_dla = logsumexp(log_posteriors_dla, axis=0)
-
         # filtering out ~nan_inds
         log_posteriors_dla    = log_posteriors_dla[~self.nan_inds]
         log_posteriors_no_dla = log_posteriors_no_dla[~self.nan_inds]
@@ -220,13 +218,13 @@ class QSOLoaderZDLAs(QSOLoader):
         map_model_index  = self.dla_map_model_index[real_index]
         
         # make sure having at least one DLA, concordance ∩ garnett
-        real_index = real_index[map_model_index > self.sub_dla]
+        real_index = real_index[map_model_index > 0]
         
         map_z_dlas   = self.all_z_dlas[real_index]
         map_log_nhis = self.all_log_nhis[real_index]
         
-        Delta_z_dlas   = map_z_dlas   - self.dla_catalog.z_dlas[map_model_index > self.sub_dla]
-        Delta_log_nhis = map_log_nhis - self.dla_catalog.log_nhis[map_model_index > self.sub_dla]
+        Delta_z_dlas   = map_z_dlas   - self.dla_catalog.z_dlas[map_model_index > 0]
+        Delta_log_nhis = map_log_nhis - self.dla_catalog.log_nhis[map_model_index > 0]
 
         return Delta_z_dlas, Delta_log_nhis
 
