@@ -20,9 +20,17 @@ for i = 1:num_quasars
     continue;
   end
 
-  [this_wavelengths, this_flux, this_noise_variance, this_pixel_mask] ...
-      = file_loader(plates(i), mjds(i), fiber_ids(i));
+  try
+    [this_wavelengths, this_flux, this_noise_variance, this_pixel_mask] ...
+        = file_loader(plates(i), mjds(i), fiber_ids(i));
+  catch
+    warning('File non-existed on the SDSS website.');
 
+    % bit 5: non-existed file
+    filter_flags(i) = bitset(filter_flags(i), 6, true);
+    continue
+  end
+  
   this_rest_wavelengths = emitted_wavelengths(this_wavelengths, z_qsos(i));
 
   % normalize flux
