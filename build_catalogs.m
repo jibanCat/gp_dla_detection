@@ -32,7 +32,7 @@ thing_ids        =  dr14_catalog{4};
 plates           =  dr14_catalog{5};
 mjds             =  dr14_catalog{6};
 fiber_ids        =  dr14_catalog{7};
-z_qsos           =  dr14_catalog{13};
+z_qsos           =  dr14_catalog{9}; % we should use the most robust estimate
 zwarning         =  dr14_catalog{15};
 % snrs             =  dr14_catalog{46}; % no SNR in dr14q
 bal_visual_flags = (dr14_catalog{32} > 0); % no visual for dr14q
@@ -104,7 +104,7 @@ variables_to_save = {'sdss_names', 'ras', 'decs', 'thing_ids', 'plates', ...
                      'bal_visual_flags', 'in_dr9', 'in_dr10', 'filter_flags', ...
                      'los_inds', 'dla_inds', 'z_dlas', 'log_nhis', ...
                      'zwarning', 'in_dr12'};
-save(sprintf('%s/catalog_zflag', processed_directory(release)), ...
+save(sprintf('%s/catalog', processed_directory(release)), ...
     variables_to_save{:}, '-v7.3');
 
 % % these plates use the 5.7.2 processing pipeline in SDSS DR12
