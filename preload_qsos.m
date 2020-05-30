@@ -3,8 +3,9 @@
 % and truncation to the region of interest
 
 % load QSO catalog
+% load the DR14Q catalog
 variables_to_load = {'z_qsos', 'plates', 'mjds', 'fiber_ids', 'filter_flags'};
-load(sprintf('%s/zqso_only_catalog', processed_directory(release)), ...
+load(sprintf('%s/catalog', processed_directory(release)), ...
     variables_to_load{:});
 
 num_quasars = numel(z_qsos);
@@ -20,8 +21,16 @@ for i = 1:num_quasars
     continue;
   end
 
-  [this_wavelengths, this_flux, this_noise_variance, this_pixel_mask] ...
-      = file_loader(plates(i), mjds(i), fiber_ids(i));
+  try
+    [this_wavelengths, this_flux, this_noise_variance, this_pixel_mask] ...
+        = file_loader(plates(i), mjds(i), fiber_ids(i));
+  catch
+    warning('File non-existed on the SDSS website.');
+
+    % bit 5: non-existed file
+    filter_flags(i) = bitset(filter_flags(i), 6, true);
+    continue;
+  end
 
   % do not normalize flux: this is done in the learning and processing code.
 
