@@ -93,6 +93,7 @@ all_oscillator_strengths = [
 
 # convert relative velocity to redshift
 kms_to_z = lambda kms : kms * 1000 / speed_of_light
+z_to_kms = lambda z   : z * speed_of_light / 1000
 
 # utility functions for redshifting
 emitted_wavelengths  = lambda observed_wavelengths, z : observed_wavelengths / (1 + z)
