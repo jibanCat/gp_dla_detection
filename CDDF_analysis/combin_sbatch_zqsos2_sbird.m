@@ -120,8 +120,9 @@ for i = 0:(num_files - 1)
     % so it is possible that they are not in the shape of `num_quasars_split`
     % I would recommend to re-write the code with these two initialized
     [num_quasars_sub , ~] = size(processed.sample_log_posteriors_dla_sub);
-    sample_log_posteriors_dla_sub(qso_start:qso_end, :) = processed.sample_log_posteriors_dla_sub(1:num_quasars_sub, :);
-    sample_log_posteriors_dla_sup(qso_start:qso_end, :) = processed.sample_log_posteriors_dla_sup(1:num_quasars_sub, :);
+    qso_end_sub = (qso_start - 1) + num_quasars_sub;
+    sample_log_posteriors_dla_sub(qso_start:qso_end_sub, :) = processed.sample_log_posteriors_dla_sub(:, :);
+    sample_log_posteriors_dla_sup(qso_start:qso_end_sub, :) = processed.sample_log_posteriors_dla_sup(:, :);
     
     log_posteriors_no_dla(qso_start:qso_end, 1)  = processed.log_posteriors_no_dla(:, 1);
     log_posteriors_dla(qso_start:qso_end, 1)     = processed.log_posteriors_dla(:, 1);
