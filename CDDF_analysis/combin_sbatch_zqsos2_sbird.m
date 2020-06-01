@@ -76,7 +76,7 @@ signal_to_noise               = nan(num_quasars, 1);
 
 
 % posteriors results which are not in init of process script
-model_posteriors = nan(num_quasars, 2);
+model_posteriors = nan(num_quasars, 3);
 p_no_dlas        = nan(num_quasars, 1);
 p_dlas           = nan(num_quasars, 1);
 
