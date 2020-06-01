@@ -10,10 +10,12 @@ test_set_name     = 'dr12q';
 
 % max_dlas          = 4;
 num_quasars_offset =  80000;
-num_quasars        =  90000;
+num_quasars_end    =  90000;
 num_quasars_split  =     50;
-num_files          = floor((num_quasars - num_quasars_offset) / num_quasars_split);
+num_files          = floor((num_quasars_end - num_quasars_offset) / num_quasars_split);
 num_final_chunk    =      0;
+
+num_quasars = num_quasars_end - num_quasars_offset;
 
 % the size of sub and sup depends on this
 DLA_cut = 20.3;
