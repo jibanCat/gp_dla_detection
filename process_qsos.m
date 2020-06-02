@@ -37,7 +37,7 @@ offset_samples_qso  = sequence(1:num_zqso_samples, 1)';
 
 % uniformly sample from z_qso_cut to max(z_qsos) + 0.1
 offset_samples_qso = (z_qso_cut - kms_to_z(3000)) + ...
-    (max(z_qsos) + kms_to_z(3000) - z_qso_cut) * offset_samples_qso;
+    (max(z_qsos) + kms_to_z(3000) - (z_qso_cut - kms_to_z(3000)) ) * offset_samples_qso;
 
 % load preprocessed QSOs
 variables_to_load = {'all_wavelengths', 'all_flux', 'all_noise_variance', ...
