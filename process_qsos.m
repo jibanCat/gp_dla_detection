@@ -35,18 +35,9 @@ sequence = scramble(haltonset(1), 'rr2');
 % ADDING: second dimension for z_qso
 offset_samples_qso  = sequence(1:num_zqso_samples, 1)';
 
-bins = 150;
-[z_freq, z_bin] = histcounts(z_qsos, z_qso_cut : ((max(z_qsos) - z_qso_cut) / bins) : max(z_qsos));
-for i=length(z_freq):-1:1
-    z_freq(i) = sum(z_freq(1:i));
-end
-
-z_freq = [0 z_freq];
-z_freq = z_freq / max(z_freq);
-[z_freq, I] = unique(z_freq);
-z_bin = z_bin(I);
-
-offset_samples_qso = interp1(z_freq, z_bin, offset_samples_qso);
+% uniformly sample from z_qso_cut to max(z_qsos) + 0.1
+offset_samples_qso = (z_qso_cut - kms_to_z(3000)) + ...
+    (max(z_qsos) + kms_to_z(3000) - z_qso_cut) * offset_samples_qso;
 
 % load preprocessed QSOs
 variables_to_load = {'all_wavelengths', 'all_flux', 'all_noise_variance', ...
