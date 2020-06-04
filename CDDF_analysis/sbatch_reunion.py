@@ -6,11 +6,14 @@ splitted files.
 # Note: all these functions required large memory; for save2mat73_zpatch
 #   the peak memory usage would rise to ~150G.
 '''
+from typing import List
+
 import h5py
 import numpy as np
 from .qso_loader import QSOLoader
 
-def mat_combine(processed_files, out_filename, chunk_size, maxshape_size):
+def mat_combine(processed_files: List, out_filename: str, chunk_size: int,
+        maxshape_size: int, small_file: bool = False) -> None:
     '''
     combine pieces of `.mat` files into a `out_filename.mat` file.
     the size of each piece needs to be specified as chunk_size.
@@ -24,11 +27,22 @@ def mat_combine(processed_files, out_filename, chunk_size, maxshape_size):
         in the first file in processed_files. So just make sure you have the correct `chunk_size` 
         for the first file.
     `maxshape_size`   (int)       : the final size of the reunited `.mat` file.
+    `small_file`      (bool)      : if you do not want to save sampling results, e.g., sample_log_likelihoods,
+        sample_log_posteriors
     '''
     # find keys to append (the key with values equal to chunksize)
     all_filehandles = [h5py.File(processed_file, 'r') for processed_file in processed_files]
     filehandle = all_filehandles[0]
     keys_to_append = [key for key in filehandle.keys() if filehandle[key].shape[-1] == chunk_size]
+
+    # small file filter: if you want to trim down the processed file size.
+    # this happens if you don't need the sampling results per spec,
+    # which means you don't have posterior density but you have 
+    if small_file:
+        conds = ["sample_log_", "base_sample_inds", "min_z_dlas", "max_z_dlas"]
+        check_conds = lambda key : any([cond in key for cond in conds])
+
+        keys_to_append = [key for key in keys_to_append if not check_conds(key)]
 
     # create a new h5 file to append
     out = h5py.File(out_filename, 'w')
@@ -37,6 +51,9 @@ def mat_combine(processed_files, out_filename, chunk_size, maxshape_size):
     for i,f in enumerate(all_filehandles):
         if i == 0: # copy entire dataset in the first occurrence
             for key in f.keys():
+                if small_file:
+                    if check_conds(key):
+                        continue
                 out.create_dataset(
                     key, shape=f[key].shape, maxshape=f[key].shape[:-1] + (None, ), dtype=f[key].dtype)
                 out[key][()] = f[key][()]
@@ -76,9 +93,13 @@ def save2mat73(filename, out_filename, small_file=False, dla_nhi_cut=False, samp
 
     processed_file = {}
 
+    # small file checking conditions, discard vars if they are in this list
+    conds = ["sample_log_", "base_sample_inds", "min_z_dlas", "max_z_dlas"]
+    check_conds = lambda key : any([cond in key for cond in conds])
+
     for key in f.keys():
         if small_file:
-            if "sample_log_likelihoods" in key or "base_sample_inds" in key:
+            if check_conds(key):
                 continue
         processed_file[u'{}'.format(key)] = np.transpose( f[key][()] )
 
@@ -93,6 +114,10 @@ def save2mat73_zpatch(filename, catalog_file, out_filename, small_file=False, sn
         model_posteriors = [ p_no_dlas, p_lls, p_dla_1, p_dla_2, p_dla_3, ... ]
     '''
     import hdf5storage
+
+    # small file checking conditions, discard vars if they are in this list
+    conds = ["sample_log_", "base_sample_inds", "min_z_dlas", "max_z_dlas"]
+    check_conds = lambda key : any([cond in key for cond in conds])
 
     f = h5py.File(filename, 'r')
     catalog = h5py.File(catalog_file, 'r')
@@ -115,7 +140,7 @@ def save2mat73_zpatch(filename, catalog_file, out_filename, small_file=False, sn
     for key in f.keys():
         # if you want small file then you don't want every samples per spectrum
         if small_file:
-            if "sample_log_likelihoods" in key or "base_sample_inds" in key:
+            if check_conds(key):
                 continue
         # modify arrays based on the filter_flags
         if f[key].shape[-1] == size:
