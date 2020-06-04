@@ -28,7 +28,7 @@ def generate_qsos(base_directory="", release="dr12q",
     preloaded_file = os.path.join( 
         base_directory, processed_directory(release), "preloaded_zqso_only_qsos.mat")
     processed_file  = os.path.join(
-        base_directory, processed_directory(release), "processed_zqso_only_qsos_dr12q-100" )
+        base_directory, processed_directory(release), "processed_zqso_only_qsos_dr12q-100.mat" )
     catalogue_file = os.path.join(
         base_directory, processed_directory(release), "zqso_only_catalog.mat")
     learned_file   = os.path.join(
@@ -43,6 +43,80 @@ def generate_qsos(base_directory="", release="dr12q",
         sample_file=sample_file, occams_razor=False, suppressed=suppressed)
 
     return qsos_zqsos
+
+def do_procedure_plots(qsos, model_min_lambda=910, model_max_lambda=3000):
+    # scaling factor between rest_wavelengths to pixels
+    min_lambda = model_min_lambda - 10
+    max_lambda = model_max_lambda + 10
+    scale = 1 / ( max_lambda - min_lambda )
+
+    # compare different learned mus
+    fig, ax = plt.subplots(1, 1, figsize=(16, 5))
+    ax.plot(
+        qsos.GP.rest_wavelengths, qsos.GP.mu, label=r"$\mu$ (prior mean)")
+
+    ax.legend()
+    ax.set_xlabel(r"Restframe wavelengths $\lambda_{\mathrm{rest}}$ $\AA$")
+    ax.set_ylabel(r"Normalized flux")
+    ax.set_xlim([min_lambda, max_lambda])
+
+    ax02 = ax.twiny()
+    ax02.set_xticks(
+        [
+            (lyman_limit     - min_lambda) * scale,
+            (lyb_wavelength  - min_lambda) * scale,
+            (lya_wavelength  - min_lambda) * scale,
+            (civ_wavelength  - min_lambda) * scale,
+            (siiv_wavelength - min_lambda) * scale,
+            (ciii_wavelength - min_lambda) * scale,
+            (mgii_wavelength - min_lambda) * scale,
+        ]
+    )
+    ax02.set_xticklabels([r"Ly $\infty$", r"Ly $\beta$", r"Ly $\alpha$", 
+                          r"C$_{IV}$", r"Si$_{IV}$", r"C$_{III}$",
+                          r"Mg$_{II}$"])
+    plt.tight_layout()
+    save_figure("GP_mu")
+    plt.clf()
+
+    # plotting covariance matrix
+    min_lambda = model_min_lambda 
+    max_lambda = model_max_lambda
+    scale = np.shape(qsos.GP.C)[0] / ( max_lambda - min_lambda )
+
+    fix, ax = plt.subplots(figsize=(8,8))
+    ax.imshow(qsos.GP.C, origin="lower", cmap="gray_r")
+    ax.set_xticks(
+        [
+         (lyman_limit    - min_lambda) * scale,
+         (lyb_wavelength - min_lambda) * scale,
+         (lya_wavelength - min_lambda) * scale,
+         (civ_wavelength  - min_lambda) * scale,
+         (siiv_wavelength - min_lambda) * scale,
+         (ciii_wavelength - min_lambda) * scale,
+         (mgii_wavelength - min_lambda) * scale,
+        ]
+    )
+    ax.set_xticklabels([r"Ly$\infty$", r"Ly$\beta$", r"Ly$\alpha$", 
+                        r"C$_{IV}$", r"Si$_{IV}$", r"C$_{III}$",
+                        r"Mg$_{II}$"])
+    ax.set_yticks(
+        [
+         (lyman_limit    - min_lambda) * scale,
+         (lyb_wavelength - min_lambda) * scale,
+         (lya_wavelength - min_lambda) * scale,
+         (civ_wavelength  - min_lambda) * scale,
+         (siiv_wavelength - min_lambda) * scale,
+         (ciii_wavelength - min_lambda) * scale,
+         (mgii_wavelength - min_lambda) * scale,
+        ]
+    )
+    ax.set_yticklabels([r"Ly$\infty$", r"Ly$\beta$", r"Ly$\alpha$", 
+                        r"C$_{IV}$", r"Si$_{IV}$", r"C$_{III}$",
+                        r"Mg$_{II}$"])
+    plt.tight_layout()
+    save_figure("covariance_matrix")
+    plt.clf()
 
 def do_velocity_dispersions(qsos, dr12q_fits='data/dr12q/distfiles/DR12Q.fits'):
     '''

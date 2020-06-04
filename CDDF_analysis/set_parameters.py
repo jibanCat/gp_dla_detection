@@ -13,7 +13,8 @@ ovi_wavelength  = 1033.82
 oi_wavelength   = 1305.53
 siiv_wavelength = 1397.61
 civ_wavelength  = 1549.48
-
+ciii_wavelength = 1908.73
+mgii_wavelength = 2799.12
 
 # oscillator strengths
 lya_oscillator_strength = 0.416400
