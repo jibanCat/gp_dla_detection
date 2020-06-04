@@ -155,6 +155,7 @@ end
 
 % catch the exceptions
 all_exceptions = false(num_quasars, 1);
+all_posdeferrors = zeros(num_quasars, 1);
 
 for quasar_ind = q_ind_start:num_quasars %quasar list
     tic;
@@ -208,6 +209,12 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         all_exceptions(quasar_ind, 1) = 1;
         continue;
     end
+
+    % record posdef error;
+    % if it only happens for some samples not all of the samples, I would prefer
+    % to think it is due to the noise_variace of the incomplete data combine with
+    % the K causing the Covariance behaving weirdly.
+    this_posdeferror = false(1, num_dla_samples);
 
     parfor i = 1:num_dla_samples       %variant redshift in quasars 
         z_qso = offset_samples_qso(i);
@@ -409,11 +416,21 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         occams = occams_factor * (1 - lambda_observed / (max_lambda - min_lambda) );
 
         % baseline: probability of no DLA model
-        this_sample_log_likelihoods_no_dla(1, i) = ...
-            log_mvnpdf_low_rank(this_flux, this_mu, this_M, ...
-            this_omega2 + this_noise_variance) ...
-            + bw_log_likelihood + rw_log_likelihood ...
-            - occams;
+        % The error handler to deal with Postive definite errors sometime happen
+        try
+            this_sample_log_likelihoods_no_dla(1, i) = ...
+                log_mvnpdf_low_rank(this_flux, this_mu, this_M, ...
+                this_omega2 + this_noise_variance) ...
+                + bw_log_likelihood + rw_log_likelihood ...
+                - occams;
+        catch ME
+            if (strcmp(ME.identifier, 'MATLAB:posdef'))
+                this_posdeferror(1, i) = true;
+                fprintf('(QSO %d, Sample %d): Matrix must be positive definite. We skip this sample but you need to be careful about this spectrum', quasar_num, i)
+                continue
+            end
+                rethrow(ME)
+        end
 
         fprintf_debug(' ... log p(D | z_QSO, no DLA)     : %0.2f\n', ...
             this_sample_log_likelihoods_no_dla(1, i));
@@ -472,11 +489,21 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         dla_omega2 = this_omega2 .* absorption.^2;
         
         % Add a penalty for short spectra: the expected reduced chi^2 of each spectral pixel that would have been observed.
-        this_sample_log_likelihoods_dla(1, i) = ...
-            log_mvnpdf_low_rank(this_flux, dla_mu, dla_M, ...
-            dla_omega2 + this_noise_variance) ...
-            + bw_log_likelihood + rw_log_likelihood ...
-            - occams;
+        % Also add an error handler for DLA model likelihood function
+        try
+            this_sample_log_likelihoods_dla(1, i) = ...
+                log_mvnpdf_low_rank(this_flux, dla_mu, dla_M, ...
+                dla_omega2 + this_noise_variance) ...
+                + bw_log_likelihood + rw_log_likelihood ...
+                - occams;
+        catch ME
+            if (strcmp(ME.identifier, 'MATLAB:posdef'))
+                this_posdeferror(1, i) = true;
+                fprintf('(QSO %d, Sample %d): Matrix must be positive definite. We skip this sample but you need to be careful about this spectrum', quasar_num, i)
+                continue
+            end
+                rethrow(ME)
+        end
     end
 
     % to re-evaluate the model posterior for P(DLA| logNHI > 20.3)
@@ -536,10 +563,14 @@ for quasar_ind = q_ind_start:num_quasars %quasar list
         log_posteriors_dla(quasar_ind));
 
     fprintf(' took %0.3fs. (z_map = %0.4f)\n', toc,z_map(quasar_ind));
-    if mod(quasar_ind, 50) == 0
+    if mod(quasar_ind, 100) == 0
         save(['./checkpointing/curDLA_', optTag, '.mat'], 'log_posteriors_dla_sub', 'log_posteriors_dla_sup', 'log_posteriors_dla', 'log_posteriors_no_dla', 'z_true', 'dla_true', 'quasar_ind', 'quasar_num',...
 'used_z_dla', 'nhi_samples', 'offset_samples_qso', 'offset_samples', 'z_map', 'signal_to_noise', 'z_dla_map', 'n_hi_map');
     end
+
+    % record posdef error;
+    % count number of posdef errors; if it is == num_dla_samples, then we have troubles.
+    all_posdeferrors(quasar_ind, 1) = sum(this_posdeferror);
 end
 
 
@@ -566,7 +597,7 @@ variables_to_save = {'training_release', 'training_set_name', ...
     'log_posteriors_dla_sub', 'log_posteriors_dla_sup', ...
     'model_posteriors', 'p_no_dlas', ...
     'p_dlas', 'z_map', 'z_true', 'dla_true', 'z_dla_map', 'n_hi_map', 'log_nhi_map',...
-    'signal_to_noise', 'all_thing_ids'};
+    'signal_to_noise', 'all_thing_ids', 'all_posdeferrors', 'all_exceptions', 'qso_ind'};
 
     % 'sample_log_priors_no_dla', 'sample_log_priors_dla', ...
     % 'sample_log_likelihoods_no_dla', 'sample_log_likelihoods_dla', ...

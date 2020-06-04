@@ -6,7 +6,7 @@ sbatch <<EOT
 #!/bin/bash -l
 #SBATCH --nodes=1
 #SBATCH --ntasks=32
-#SBATCH --mem=96G
+#SBATCH --mem=128G
 #SBATCH --job-name=gp_zqsos_sbird_$1-$2
 #SBATCH -p short
 #SBATCH --output="gp_zqsos_sbird_$1-$2.log"
