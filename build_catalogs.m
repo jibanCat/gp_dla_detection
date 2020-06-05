@@ -41,7 +41,7 @@ in_dr10 = ismember(thing_ids, dr10_catalog{4});
 filter_flags = zeros(num_quasars, 1, 'uint8');
 
 % filtering bit 0: 1.9 < z_QSO < 2.15
-ind = (z_qsos < z_qso_cut) & (z_qsos > z_qso_max_cut);
+ind = (z_qsos < z_qso_cut) | (z_qsos > z_qso_max_cut);
 filter_flags(ind) = bitset(filter_flags(ind), 1, true);
 
 % filtering bit 1: BAL
