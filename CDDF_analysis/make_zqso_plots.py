@@ -118,6 +118,31 @@ def do_procedure_plots(qsos, model_min_lambda=910, model_max_lambda=3000):
     save_figure("covariance_matrix")
     plt.clf()
 
+def do_plot_example(qsos, nspec=18):
+    '''
+    Plot an example spectrum, better to have a good lambda coverage
+    '''
+    # saving plots: MAP estimate model
+    z = qsos.z_map[nspec]
+
+    qsos.plot_this_mu(nspec=nspec,
+        num_voigt_lines=3, num_forest_lines=0, z_sample=z,
+        suppressed=qsos.suppressed)
+    plt.ylim(-1, 5)
+    save_figure("{}_this_mu_delta_z_{:.2g}".format(
+        qsos.thing_ids[nspec], z))
+    
+    # a plot with a wrong zsample
+    z = 3.5
+
+    qsos.plot_this_mu(nspec=nspec,
+        num_voigt_lines=3, num_forest_lines=0, z_sample=z,
+        suppressed=qsos.suppressed)
+    plt.ylim(-1, 5)
+    save_figure("{}_this_mu_delta_z_{:.2g}".format(
+        qsos.thing_ids[nspec], z))
+    
+
 def do_velocity_dispersions(qsos, dr12q_fits='data/dr12q/distfiles/DR12Q.fits'):
     '''
     Reproduce the figure 7 in SDSS DR12Q paper, with Z_MAP

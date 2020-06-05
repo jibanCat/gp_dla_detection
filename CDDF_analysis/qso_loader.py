@@ -1550,17 +1550,17 @@ class QSOLoaderZ(QSOLoader):
         # plt.figure(figsize=(16, 5))
         if new_fig:
             make_fig()
-            plt.plot(this_rest_wavelengths, this_flux, label="observed flux; spec-{}-{}-{}".format(plate, mjd, fiber_id), color="C0")
+            plt.plot(this_rest_wavelengths, this_flux, label="spec-{}-{}-{}".format(plate, mjd, fiber_id), color="C0")
 
         plt.plot(rest_wavelengths, this_mu, 
-            label=label + r"$\mathcal{M}$", 
+            label=label + r"$\mu$ (mean prior)", 
             color=color)
 
         plt.fill_between(rest_wavelengths[ind],
             this_mu[ind] - 2*this_error, this_mu[ind] + 2*this_error, alpha=0.8, color="orange")
 
-        plt.xlabel(r"rest-wavelengths $\lambda_{\mathrm{rest}}$ $\AA$")
-        plt.ylabel(r"normalised flux")
+        plt.xlabel(r"Restframe wavelengths $\lambda_{\mathrm{rest}}$ $\AA$")
+        plt.ylabel(r"Normalized flux")
         plt.legend()
         
         return rest_wavelengths, this_mu
