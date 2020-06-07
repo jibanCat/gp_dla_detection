@@ -11,7 +11,10 @@ DLA_cut = 20.3;
 catalog    = load(sprintf('%s/zqso_only_catalog', processed_directory(release)));
 catalog_jf = load(sprintf('%s/catalog_jfaub', processed_directory(release)));
 
+% the file with ind converting between test_ind in different catalogs
+% (only convert the thing_ids from 80001:end between two catalogs)
 load(sprintf('mf2jf_ind_file'))
+assert sum(jf2mf_ind) == sum(mf2jf_ind)
 
 test_ind    = catalog.filter_flags    == 0;
 test_ind_jf = catalog_jf.filter_flags == 0;
@@ -109,6 +112,17 @@ variables_to_load = {'min_z_dlas', 'max_z_dlas', ... % you need to save DLA sear
      %'all_posdeferrors', 'all_exceptions', 'qso_ind', % append these variables to complete the catalog
 
 % hardcoded to append everything
+quasar_start_ind = 80000 + 1;
+quasar_end_ind   = sum(catalog.filter_flags    == 0) + 1;
+processed = load(sprintf('%s/processed_qsos_zqsos_sbird_%s-%s_%d-%d_norm_%d-%d',             ...
+    processed_directory(release), ...
+    test_set_name, optTag, ...
+    quasar_start_ind, quasar_end_ind, ...
+    normalization_min_lambda, normalization_max_lambda), ...
+    variables_to_load{:});
+
+assert sum(processed.test_ind) == sum(catalog.filter_flags == 0)
+
 % append my variables based on Jacob's test_ind
 min_z_dlas(jf2mf_ind, :)             = processed.min_z_dlas(mf2jf_ind, :);
 max_z_dlas(jf2mf_ind, :)             = processed.max_z_dlas(mf2jf_ind, :);
