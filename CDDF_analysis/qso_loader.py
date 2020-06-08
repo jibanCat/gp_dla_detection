@@ -559,6 +559,30 @@ class QSOLoader(object):
 
         return Delta_z_dlas, Delta_log_nhis
 
+    def make_MAP_hist2d(self, p_thresh = 0.98):
+        '''
+        Make a 2D hist for z_map vs z_true
+        p_thresh (float) : p_dlas < p_thresh are not considered to be DLAs
+        '''
+        real_index = self.dla_catalog.real_index # concordance only
+
+        # get corresponding map vals for concordance only
+        # and threshold the p_dlas
+        this_dla_map_model_index = self.dla_map_model_index.copy()
+        this_dla_map_model_index[self.p_dlas < p_thresh] = 0
+        map_model_index  = this_dla_map_model_index[real_index]
+
+        # make sure having at least one DLA, concordance ∩ garnett
+        real_index = real_index[map_model_index > self.sub_dla]
+
+        map_z_dlas   = self.map_z_dlas[real_index, 0, 0]   # assume DLA(1) corresponds to the concordance value
+        map_log_nhis = self.map_log_nhis[real_index, 0, 0]
+        
+        true_z_dlas   = self.dla_catalog.z_dlas[map_model_index > self.sub_dla]
+        true_log_nhis = self.dla_catalog.log_nhis[map_model_index > self.sub_dla]
+
+        return map_z_dlas, true_z_dlas, map_log_nhis, true_log_nhis, real_index
+
     def column_density_function_noterdaeme(
             self, dla_noterdaeme, los_noterdaeme, z_min, z_max, lnhi_nbins=30, lnhi_min=20., lnhi_max=23.,
             snr_thresh=4):
