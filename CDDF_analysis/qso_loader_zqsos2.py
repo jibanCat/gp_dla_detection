@@ -228,6 +228,30 @@ class QSOLoaderZDLAs(QSOLoader):
 
         return Delta_z_dlas, Delta_log_nhis
 
+    def make_MAP_hist2d(self, p_thresh = 0.98):
+        '''
+        Make a 2D hist for z_map vs z_true
+        p_thresh (float) : p_dlas < p_thresh are not considered to be DLAs
+        '''
+        real_index = self.dla_catalog.real_index # concordance only
+
+        # get corresponding map vals for concordance only
+        # and threshold the p_dlas
+        this_dla_map_model_index = self.dla_map_model_index.copy()
+        this_dla_map_model_index[self.p_dlas < p_thresh] = 0
+        map_model_index  = this_dla_map_model_index[real_index]
+
+        # make sure having at least one DLA, concordance ∩ garnett
+        real_index = real_index[map_model_index > 0]
+
+        map_z_dlas   = self.all_z_dlas[real_index]
+        map_log_nhis = self.all_log_nhis[real_index]
+
+        true_z_dlas   = self.dla_catalog.z_dlas[map_model_index   > 0]
+        true_log_nhis = self.dla_catalog.log_nhis[map_model_index > 0]
+
+        return map_z_dlas, true_z_dlas, map_log_nhis, true_log_nhis, real_index
+
     @staticmethod
     def find_large_delta_z(z_map, z_true, delta_z):
         '''
@@ -445,3 +469,184 @@ class QSOLoaderZDLAs(QSOLoader):
         noise_variance = noise_variance / this_median ** 2
 
         return (flux, noise_variance)
+
+    def _get_estimations(self, p_thresh=0.01):
+        '''
+        Get z_dlas and log_nhis from Z estimation project, ignore all uncertainties
+        
+        Returns:
+        ----
+        thing_ids  : DLA thing_ids (could have more than one DLAs)
+        log_nhis   : DLA log NHI
+        z_dlas     : DLA z_dlas
+        min_z_dlas : minimum search absorber redshift for a given sightline
+        max_z_dlas : maximum search absorber redshift for a given sightline
+        all_snrs   : signal-to-noise ratios for all sightlines
+        snrs       : signal-to_noise ratios for DLA sightlines (could have multiple DLAs)
+        '''
+        # Get the search length first, searching length dX should consider all of the sightlines
+        # All slightlines:
+        all_thing_ids = self.thing_ids
+
+        z_qsos    = self.z_qsos
+        all_snrs  = self.snrs
+
+        # simply assume we search from limit to alpha
+        min_z_dlas = (1 + z_qsos) * (lyman_limit + kms_to_z(3000))    / lya_wavelength - 1
+        max_z_dlas = (1 + z_qsos) * (lya_wavelength - kms_to_z(5000)) / lya_wavelength - 1
+
+        # DLA slightlines:
+        dla_ind   = self.p_dlas > p_thresh
+
+        thing_ids = all_thing_ids[dla_ind]
+        z_dlas    = self.all_z_dlas[dla_ind]
+        log_nhis  = self.all_log_nhis[dla_ind]
+        snrs      = self.snrs[dla_ind]
+
+        return thing_ids, log_nhis, z_dlas, min_z_dlas, max_z_dlas, snrs, all_snrs
+
+    def column_density_function(
+            self, z_min, z_max, lnhi_nbins=30, lnhi_min=20., lnhi_max=23.,
+            snr_thresh=-1):
+        '''
+        Compute the column density distribution function for z estimation,
+        ignore all uncertainties (using MAP directly)
+
+        This should follow the convention of sbird's plot
+
+        Note:
+        ----
+        See self.column_density_function_parks for more science details  
+        
+        Parameters:
+        ----
+        z_min (float) : the minimum redshift you consider to compute the CDDF
+        z_max (float) : the maximum redshift you consdier to compute the CDDF
+        lnhi_nbins (int) : the number of bins you put on DLA column densities
+        lnhi_min (float) : the minimum log column density of DLAs you consider to plot
+        lnhi_max (float) : the maximum log column density of DLAs you consdier to plot
+        
+        Returns:
+        ----
+        l_Ncent (np.ndarray) : the array of the centers of the log NHI bins
+        cddf (np.ndarray)    : the CDDF you computed, which is f(N) = n_DLA / ΔN / ΔX
+        xerrs (np.ndarray)   : the width of each bins you applied on the log NHI bins 
+        '''
+        # log NHI bins 
+        lnhis = np.linspace(lnhi_min, lnhi_max, num=lnhi_nbins + 1)
+
+        # get MAP DLA detections
+        thing_ids, log_nhis, z_dlas, min_z_dlas, max_z_dlas, snrs, all_snrs  = self._get_estimations()
+
+        # SNR cut for both all sightlines and DLA slightlines
+        all_snr_inds = all_snrs > snr_thresh
+        snr_inds     = snrs     > snr_thresh
+
+        # update searching ranges from SNR cut
+        min_z_dlas = min_z_dlas[all_snr_inds]
+        max_z_dlas = max_z_dlas[all_snr_inds]
+
+        # desired samples
+        inds = (log_nhis > lnhi_min) * (log_nhis < lnhi_max) * (z_dlas < z_max) * (z_dlas > z_min)
+        
+        # also update the snr cuts for the DLA sightlines
+        inds = np.logical_and( snr_inds, inds )
+
+        log_nhis = log_nhis[inds]
+        z_dlas   = z_dlas[inds]
+
+        # get CDDF from histogram
+        tot_f_N, NHI_table = np.histogram(10**log_nhis, 10**lnhis)
+
+        dX = self.path_length(min_z_dlas, max_z_dlas, z_min, z_max)
+        dN = np.array( [10**lnhi_x - 10**lnhi_m for (lnhi_m, lnhi_x) in zip( lnhis[:-1], lnhis[1:] ) ] )
+
+        cddf = tot_f_N / dX / dN
+
+        l_Ncent = np.array([ (lnhi_x + lnhi_m) / 2. for (lnhi_m, lnhi_x) in zip(lnhis[:-1], lnhis[1:]) ])
+        xerrs   = (10**l_Ncent - 10**lnhis[:-1], 10**lnhis[1:] - 10**l_Ncent)
+
+        return (l_Ncent, cddf, xerrs)
+
+    def plot_cddf(
+            self, zmin=1., zmax=6., label='Z Estimation DR12', color=None, moment=False,
+            snr_thresh=-1):
+        '''
+        plot the column density function of Z Estiamtion DR12 catalogue
+        '''
+        (l_N, cddf, xerrs) = self.column_density_function(
+            z_min=zmin, z_max=zmax, snr_thresh=snr_thresh)
+
+        if moment:
+            cddf *= 10**l_N
+
+        plt.errorbar(10**l_N, cddf, xerr=(xerrs[0], xerrs[1]), fmt='o', label=label, color=color)
+        plt.yscale('log')
+        plt.xscale('log')
+        plt.xlabel(r"$N_\mathrm{HI}$ (cm$^{-2}$)")
+        plt.ylabel(r"$f(N_\mathrm{HI})$")
+
+        return (l_N, cddf)
+
+
+    def line_density(
+            self, z_min=2, z_max=5, lnhi_min=20.3, bins_per_z=6,
+            snr_thresh=-1):
+        '''
+        Compute the line density for Z Estimation DR12
+        '''
+        nbins = np.max([ int( (z_max - z_min) * bins_per_z ), 1 ])
+
+        # get the redshift bins
+        z_bins = np.linspace(z_min, z_max, nbins + 1) 
+
+        # get MAP DLA detections
+        thing_ids, log_nhis, z_dlas, min_z_dlas, max_z_dlas,snrs,all_snrs = self._get_estimations()
+
+        # SNR cut for both all sightlines and DLA sightlines
+        all_snr_inds = all_snrs > snr_thresh
+        snr_inds     = snrs     > snr_thresh
+
+        # update the searching ranges using SNR cuts
+        min_z_dlas = min_z_dlas[all_snr_inds]
+        max_z_dlas = max_z_dlas[all_snr_inds]
+
+        # desired DLA samples
+        inds = (log_nhis > lnhi_min)
+
+        # also update the SNR cuts to the DLA slightlines
+        inds = np.logical_and( snr_inds, inds )
+
+        z_dlas = z_dlas[inds]
+
+        # estimate the number of DLAs
+        ndlas, _ = np.histogram( z_dlas, z_bins )
+
+        dX = np.array([ self.path_length(min_z_dlas, max_z_dlas, z_m, z_x)
+            for (z_m, z_x) in zip(z_bins[:-1], z_bins[1:]) ])
+
+        ii = np.where( dX > 0 )
+        dX = dX[ii]
+
+        dNdX = ndlas[ii] / dX
+
+        z_cent = np.array( [ (z_x + z_m) / 2. for (z_m, z_x) in zip(z_bins[:-1], z_bins[1:]) ] )
+        xerrs  = (z_cent[ii] - z_bins[:-1][ii], z_bins[1:][ii] - z_cent[ii])
+
+        return (z_cent[ii], dNdX, xerrs)
+
+    def plot_line_density(
+        self, zmin=2, zmax=5, label="Z Estimation DR12", color=None,
+        snr_thresh=-1):
+        '''
+        plot the line density of Z Estimation DR12
+        '''
+        z_cent, dNdX, xerrs = self.line_density(
+            z_min=zmin, z_max=zmax, snr_thresh=snr_thresh)
+
+        plt.errorbar(z_cent, dNdX, xerr=xerrs, fmt='o', label=label, color=color)
+        plt.xlabel(r'z')
+        plt.ylabel(r'dN/dX')
+        plt.xlim(zmin, zmax)
+
+        return z_cent, dNdX
