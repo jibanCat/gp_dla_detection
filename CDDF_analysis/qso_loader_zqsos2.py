@@ -470,7 +470,7 @@ class QSOLoaderZDLAs(QSOLoader):
 
         return (flux, noise_variance)
 
-    def _get_estimations(self, p_thresh=0.01):
+    def _get_estimations(self, p_thresh=0.9):
         '''
         Get z_dlas and log_nhis from Z estimation project, ignore all uncertainties
         
@@ -493,7 +493,7 @@ class QSOLoaderZDLAs(QSOLoader):
 
         # simply assume we search from limit to alpha
         min_z_dlas = (1 + z_qsos) * (lyman_limit + kms_to_z(3000))    / lya_wavelength - 1
-        max_z_dlas = (1 + z_qsos) * (lya_wavelength - kms_to_z(5000)) / lya_wavelength - 1
+        max_z_dlas = (1 + z_qsos) * (lya_wavelength - kms_to_z(3000)) / lya_wavelength - 1
 
         # DLA slightlines:
         dla_ind   = self.p_dlas > p_thresh
