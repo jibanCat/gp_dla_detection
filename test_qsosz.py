@@ -13,7 +13,7 @@ from CDDF_analysis.set_parameters import *
 delta_z = 0.5
 
 # generate QSOLoader insrance
-qsos = make_zqso_plots.generate_qsos(suppressed=True)
+qsos = make_zqso_plots.generate_qsos(suppressed=False)
 
 # z_map versus z_true
 index = qsos.plot_z_map(delta_z=delta_z)
