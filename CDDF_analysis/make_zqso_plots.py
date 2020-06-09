@@ -3,6 +3,7 @@ Make plots for Z estimate paper
 '''
 import os
 import numpy as np
+from scipy.stats import pearsonr
 import matplotlib
 from matplotlib import pyplot as plt
 from .set_parameters import *

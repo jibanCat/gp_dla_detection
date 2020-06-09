@@ -10,6 +10,7 @@ import h5py
 
 from .set_parameters import *
 from .qso_loader import QSOLoader, GPLoader, make_fig
+from .voigt import Voigt_absorption
 
 class QSOLoaderZDLAs(QSOLoader):
     '''
@@ -420,22 +421,47 @@ class QSOLoaderZDLAs(QSOLoader):
         K      = np.matmul(this_M , this_M.T )
         this_k = np.diag(K)
 
-        this_error = this_omega2[ind] + this_k[ind] + this_v
+        # this_kernel = Omega + diag(K)
+        this_kernel   = this_omega2 + this_k
+
+        # get the MAP DLA values
+        nth = np.argmax( self.model_posteriors[nspec] ) - 1
+        if nth >= 0:
+            map_z_dlas    = np.array([ self.all_z_dlas[nspec] ])
+            map_log_nhis  = np.array([ self.all_log_nhis[nspec] ])
+            assert ~np.isnan(map_z_dlas)
+
+            for map_z_dla, map_log_nhi in zip(map_z_dlas, map_log_nhis):
+                absorption = Voigt_absorption(
+                    rest_wavelengths * (1 + self.z_qsos[nspec]),
+                    10**map_log_nhi, map_z_dla, num_lines=num_voigt_lines)
+
+                this_mu    = this_mu * absorption
+                this_error = this_kernel * absorption**2
+
+        this_error = this_kernel[ind] + this_v
 
         # plt.figure(figsize=(16, 5))
         if new_fig:
             make_fig()
             plt.plot(this_rest_wavelengths, this_flux, label="observed flux; spec-{}-{}-{}".format(plate, mjd, fiber_id), color="C0")
 
-        plt.plot(rest_wavelengths, this_mu, 
-            label=label + r"$\mathcal{M}$"+r" DLA({n})".format(n=0) + ": {:.3g}".format(self.p_no_dlas[nspec]), 
-            color=color)
+        if nth >= 0:
+            plt.plot(rest_wavelengths, this_mu, 
+                label=label + r"$\mathcal{M}$"+r" DLA({n})".format(n=nth+1) + ": {:.3g}; ".format(
+                    self.model_posteriors[nspec, nth+1]) + 
+                    "lognhi = ({})".format( ",".join("{:.3g}".format(n) for n in map_log_nhis) ), 
+                color=color)
+        else:
+            plt.plot(rest_wavelengths, this_mu, 
+                label=label + r"$\mathcal{M}$"+r" DLA({n})".format(n=0) + ": {:.3g}".format(self.p_no_dlas[nspec]), 
+                color=color)
 
         plt.fill_between(rest_wavelengths[ind],
             this_mu[ind] - 2*this_error, this_mu[ind] + 2*this_error, alpha=0.8, color="orange")
 
-        plt.xlabel(r"rest-wavelengths $\lambda_{\mathrm{rest}}$ $\AA$")
-        plt.ylabel(r"normalised flux")
+        plt.xlabel(r"Rest Wavelengths $\lambda_{\mathrm{rest}}$ $\AA$")
+        plt.ylabel(r"Normalized Flux")
         plt.legend()
         
         return rest_wavelengths, this_mu
