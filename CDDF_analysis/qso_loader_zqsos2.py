@@ -433,7 +433,7 @@ class QSOLoaderZDLAs(QSOLoader):
 
             for map_z_dla, map_log_nhi in zip(map_z_dlas, map_log_nhis):
                 absorption = Voigt_absorption(
-                    rest_wavelengths * (1 + self.z_qsos[nspec]),
+                    rest_wavelengths * (1 + z_qso),
                     10**map_log_nhi, map_z_dla, num_lines=num_voigt_lines)
 
                 this_mu    = this_mu * absorption
