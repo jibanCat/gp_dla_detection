@@ -425,7 +425,7 @@ class QSOLoaderZDLAs(QSOLoader):
         this_kernel   = this_omega2 + this_k
 
         # get the MAP DLA values
-        nth = np.argmax( self.model_posteriors[nspec] ) - 1
+        nth = (self.p_dlas[nspec] > self.p_no_dlas[nspec]) - 1
         if nth >= 0:
             map_z_dlas    = np.array([ self.all_z_dlas[nspec] ])
             map_log_nhis  = np.array([ self.all_log_nhis[nspec] ])
@@ -433,7 +433,7 @@ class QSOLoaderZDLAs(QSOLoader):
 
             for map_z_dla, map_log_nhi in zip(map_z_dlas, map_log_nhis):
                 absorption = Voigt_absorption(
-                    rest_wavelengths * (1 + self.z_qsos[nspec]),
+                    rest_wavelengths * (1 + z_qso),
                     10**map_log_nhi, map_z_dla, num_lines=num_voigt_lines)
 
                 this_mu    = this_mu * absorption
@@ -449,7 +449,7 @@ class QSOLoaderZDLAs(QSOLoader):
         if nth >= 0:
             plt.plot(rest_wavelengths, this_mu, 
                 label=label + r"$\mathcal{M}$"+r" DLA({n})".format(n=nth+1) + ": {:.3g}; ".format(
-                    self.model_posteriors[nspec, nth+1]) + 
+                    self.p_dlas[nspec]) + 
                     "lognhi = ({})".format( ",".join("{:.3g}".format(n) for n in map_log_nhis) ), 
                 color=color)
         else:
