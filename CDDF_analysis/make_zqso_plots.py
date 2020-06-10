@@ -84,7 +84,7 @@ def do_procedure_plots(qsos, model_min_lambda=910, model_max_lambda=3000):
     max_lambda = model_max_lambda
     scale = np.shape(qsos.GP.C)[0] / ( max_lambda - min_lambda )
 
-    fix, ax = plt.subplots(figsize=(8,8))
+    fix, ax = plt.subplots(figsize=(10,10))
     ax.imshow(qsos.GP.C, origin="lower", cmap="gray_r")
     ax.set_xticks(
         [
@@ -114,6 +114,7 @@ def do_procedure_plots(qsos, model_min_lambda=910, model_max_lambda=3000):
     ax.set_yticklabels([r"Ly$\infty$", r"Ly$\beta$", r"Ly$\alpha$", 
                         r"C$_{IV}$", r"Si$_{IV}$", r"C$_{III}$",
                         r"Mg$_{II}$"])
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)    
     plt.tight_layout()
     save_figure("covariance_matrix")
     plt.clf()
