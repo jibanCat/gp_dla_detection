@@ -90,6 +90,38 @@ def do_ROC(qsos, occams_razor=1):
     save_figure("ROC_z")
     plt.clf()
 
+def do_ROC_Noterdaeme(qsos,
+        dla_noterdaeme:str = 'data/dla_catalogs/dr12q_noterdaeme/processed/dla_catalog',
+        los_noterdaeme:str = 'data/dla_catalogs/dr12q_noterdaeme/processed/los_catalog',
+        occams_razor: int  = 1):
+    '''
+    Plot ROC curves using Noterdaeme as ground truth
+
+    Note:
+    ----
+    Noterdaeme DR12 is a multi-DLA catalogue, we converted it to a single DLA
+    catalogue by selecting DLAs on a sightline basis.
+
+    Parameters:
+    ----
+    occams_razor : N > 0, only for multi-DLA
+    '''
+    qsos.load_dla_noterdaeme(dla_noterdaeme, los_noterdaeme, lnhi_min=20)
+
+    TPR, FPR   = qsos.make_ROC(qsos.dla_catalog_noterdaeme, occams_razor=occams_razor)
+    
+    from scipy.integrate import cumtrapz
+
+    AUC  = - cumtrapz(TPR, x=FPR)[-1]
+
+    plt.plot(FPR,  TPR,  color="C1", label="current;  AUC: {:.3g}".format(AUC))
+    plt.xlabel("False positive rate (FPR)")
+    plt.ylabel("True positive rate (TPR)")
+    plt.legend()
+    save_figure("ROC_z_noterdaeme")
+    plt.clf()
+
+
 def gen_multidla_catalog(qsos_multidla: QSOLoaderMultiDLA, base_thing_ids: np.ndarray,
         p_thresh: float = 0.9, lnhi_min: float = 20., release: str = "dr12q"):
     '''

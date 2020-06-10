@@ -469,6 +469,97 @@ class QSOLoader(object):
             thing_ids=thing_ids, thing_ids_los=thing_ids_los, 
             z_dlas=z_dlas, log_nhis=log_nhis, release=release)
 
+    def load_dla_noterdaeme(self, dla_noterdaeme, los_noterdaeme, lnhi_min=20, release='dr12'):
+        '''
+        load dla_noterdaeme .txt file : (thing_ids, z_dlas, log_nhis)
+        
+        Also, match the existed thing_ids in the test data (processed data)
+
+        Note:
+        ----
+        Noterdame is a multi-DLA catalog, but we only want to compare ROC
+        on a per-slightline basis. So should reduce the catalog to only consdiering
+        whether this real_index/thing_id contains DLAs or not.
+
+        Parameters:
+        ----
+        dla_noterdaeme (str) : path to the noterdaeme DLA catalogue
+        los_noterdaeme (str) : path to the noterdaeme LOS catalogue
+        lnhi_min (float) : minimum value logNHI for DLAs
+        release (str) : default 'dr12'
+        '''
+        dla_catalog = np.loadtxt(dla_noterdaeme)
+        los_catalog = np.loadtxt(los_noterdaeme)
+
+        thing_ids = dla_catalog[:, 0].astype(np.int)
+        z_dlas    = dla_catalog[:, 1]
+        log_nhis  = dla_catalog[:, 2]
+
+        print("[Noterdame] Total DLAs {}".format(len(thing_ids)))
+
+        # apply the lower cut for logNHI
+        # The logNHI cut should before the unique selection since we don't know
+        # if the unique selection will drop the logNHI we want to select
+        inds = log_nhis > lnhi_min
+        
+        # also remove -1, due to -1 introduce difficulties when we want to find
+        # intersection between
+        inds = inds & (thing_ids != -1)
+
+        thing_ids = thing_ids[inds]
+        z_dlas    = z_dlas[inds]
+        log_nhis  = log_nhis[inds]
+
+        print("[Noterdaeme] Total DLAs after logNHI selection {}".format(
+            len(z_dlas)))
+        assert all(z_dlas < 7) # make sure getting the correct column
+
+        # remove multi-DLA, counting DLAs on a slightline basis
+        thing_ids, unique_index = np.unique(thing_ids, return_index=True)
+        assert np.all(thing_ids == dla_catalog[inds, 0][unique_index].astype(np.int))
+
+        # re-ordering (z_dla, log_nhis), only count on sightline basis
+        z_dlas   = z_dlas[unique_index]
+        log_nhis = log_nhis[unique_index]
+        
+        print("[Noterdaeme] Total DLAs after removing duplicate sightlines {}".format(
+            len(z_dlas)))
+
+        # remove -1, since Noterdaeme also counts -1
+        thing_ids_los = los_catalog.astype(np.int)
+        ind = thing_ids_los != -1
+        thing_ids_los = thing_ids_los[ind]
+        assert len(thing_ids_los) == len(np.unique(thing_ids_los))
+
+        # assumption here is concordance only has 1-DLA
+        real_index = np.where( np.in1d(self.thing_ids, thing_ids) )[0]
+        real_index_los = np.where( np.in1d(self.thing_ids, thing_ids_los) )[0]
+
+        print(
+            "[Warning] {} DLAs lost and {} QSOs lost after np.in1d (searching matched thing_ids in the test data).".format(
+                thing_ids.shape[0] - real_index.shape[0], 
+                thing_ids_los.shape[0] - real_index_los.shape[0]))
+
+        # re-select (z_dla, log_nhi) values from the intersection bt Garnett
+        inds = np.in1d( thing_ids, self.thing_ids )
+        z_dlas    = z_dlas[inds]
+        log_nhis  = log_nhis[inds]
+        thing_ids = thing_ids[inds]
+
+        assert z_dlas.shape[0] == real_index.shape[0]
+        assert real_index.shape[0] == thing_ids.shape[0]
+
+        # store data in named tuple under self
+        dla_catalog = namedtuple(
+            'dla_catalog_concordance', 
+            ['real_index', 'real_index_los', 
+            'thing_ids', 'thing_ids_los', 
+            'z_dlas', 'log_nhis', 'release'])
+        self.dla_catalog_noterdaeme = dla_catalog(
+            real_index=real_index, real_index_los=real_index_los, 
+            thing_ids=thing_ids, thing_ids_los=thing_ids_los, 
+            z_dlas=z_dlas, log_nhis=log_nhis, release=release)
+
 
     @staticmethod
     def make_unique_id(plates, mjds, fiber_ids):
