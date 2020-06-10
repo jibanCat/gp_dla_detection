@@ -1312,7 +1312,13 @@ class QSOLoaderZ(QSOLoader):
 
         # store small arrays
         # self.z_qsos     = self.catalogue_file['z_qsos'][0, :]
-        self.snrs_cat   = self.catalogue_file['snrs'][0, :]
+        try:
+            self.snrs_cat   = self.catalogue_file['snrs'][0, :]
+        except KeyError as e:
+            print(e)
+            print("[Warning] snrs doesn't exist in catalog.mat, re-assign NaNs")
+            self.snrs_cat = np.empty(self.test_ind.shape)
+            self.snrs_cat[:] = np.nan
 
         # self.z_qsos = self.z_qsos[self.test_ind]
         self.snrs_cat   = self.snrs_cat[self.test_ind]
