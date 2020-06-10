@@ -409,7 +409,6 @@ class QSOLoader(object):
         self.all_log_nhis[nspec] = log_nhi_samples[map_index]
         self.all_z_dlas[nspec]   = sample_z_dlas[map_index]
 
-
     def load_dla_concordance(self, dla_concordance, los_concordance, lnhi_min=20, release='dr9'):
         '''
         load dla_concordance .txt file : (thing_ids, z_dlas, log_nhis)
@@ -457,6 +456,11 @@ class QSOLoader(object):
             "[Warning] {} DLAs lost and {} QSOs lost after np.in1d (searching matched thing_ids in the test data).".format(
                 thing_ids.shape[0] - real_index.shape[0], 
                 thing_ids_los.shape[0] - real_index_los.shape[0]))
+
+        # [zqsos_sbird] the thing_ids also need to be update to make sure all
+        # variables are in the same length.
+        thing_ids = thing_ids[inds]
+        assert thing_ids.shape[0] == real_index.shape[0]
 
         # store data in named tuple under self
         dla_catalog = namedtuple(
