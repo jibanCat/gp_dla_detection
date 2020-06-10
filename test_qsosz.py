@@ -10,7 +10,7 @@ from CDDF_analysis.set_parameters import *
 
 matplotlib.use('TkAgg')
 
-delta_z = 1
+delta_z = 0.5
 
 # generate QSOLoader insrance
 qsos = make_zqso_plots.generate_qsos()
@@ -19,15 +19,29 @@ qsos = make_zqso_plots.generate_qsos()
 index = qsos.plot_z_map(delta_z=delta_z)
 plt.show()
 
-# plot specific example: this example shows -inf posteriors
-# at the true zQSO parameter space
-nspec = 15
+print("Misfits : ", qsos.thing_ids[index].shape[0])
+print("Thing_IDs = ", qsos.thing_ids[index])
+print("MSE z_true-z_map : {:.3g}".format( np.mean( (qsos.z_map - qsos.z_true)**2 )  ))
+print("Misfit SNRs (catalog values) : ", qsos.snrs_cat[index])
 
-# this plots P(M|D) versus z_samples
-qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
-plt.show()
+# 2D histogram
+fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+(h, xedges, yedges, im) = ax.hist2d(qsos.z_map, qsos.z_true,
+    bins = int(np.sqrt(qsos.z_map.shape[0]) / 2), cmap='gray_r', norm=matplotlib.colors.LogNorm())
+ax.set_xlabel(r"$z_{{QSO,MAP}}$")
+ax.set_ylabel(r"$z_{{QSO,catalog}}$")
+fig.colorbar(im, ax=ax)
+make_zqso_plots.save_figure("hist2d_z_map_vs_z_true_pure-z")
+plt.clf()
+plt.close()
+# plt.show()
+
+# # this plots P(M|D) versus z_samples
+# qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
+# plt.show()
 
 # Plot the spectra with this_mu, using MAP z estimate
+nspec = 15
 qsos.plot_this_mu(nspec=nspec, suppressed=True, 
     num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
 plt.ylim(-1, 5)
@@ -42,21 +56,21 @@ plt.show()
 for nspec in np.where(index)[0]:
     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
-    # saving plots: z_samples versus poseteriors
-    qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
-    plt.savefig("{}_posterior_zqso_samples_delta_z_{}.pdf".format(
-            qsos.thing_ids[nspec], delta_z),
-            dpi=150, format='pdf')
-    plt.close()
-    plt.clf()
-    # plt.show()
+    # # saving plots: z_samples versus poseteriors
+    # qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
+    # plt.savefig("data/zqsos2_sbird_plots/{}_posterior_zqso_samples_delta_z_{}.pdf".format(
+    #         qsos.thing_ids[nspec], delta_z),
+    #         dpi=150, format='pdf')
+    # plt.close()
+    # plt.clf()
+    # # plt.show()
 
     # saving plots: MAP estimate model
     qsos.plot_this_mu(nspec=nspec, suppressed=True, 
         num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
     plt.ylim(-1, 5)        
     make_zqso_plots.save_figure(
-        "{}_this_mu_delta_z_{}_ZMAP".format(
+        "data/zqsos2_sbird_plots/{}_this_mu_delta_z_{}_ZMAP".format(
             qsos.thing_ids[nspec], delta_z))
     plt.close()
     plt.clf()
@@ -67,7 +81,7 @@ for nspec in np.where(index)[0]:
         num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec])
     plt.ylim(-1, 5)    
     make_zqso_plots.save_figure(
-        "{}_this_mu_delta_z_{}_ZTrue".format(
+        "data/zqsos2_sbird_plots/{}_this_mu_delta_z_{}_ZTrue".format(
             qsos.thing_ids[nspec], delta_z))
     plt.close()
     plt.clf()
