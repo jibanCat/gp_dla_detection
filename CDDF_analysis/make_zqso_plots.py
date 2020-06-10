@@ -2,12 +2,14 @@
 Make plots for Z estimate paper
 '''
 import os
+from collections import namedtuple
 import numpy as np
 from scipy.stats import pearsonr
 import matplotlib
 from matplotlib import pyplot as plt
 from .set_parameters import *
 from .qso_loader_zqsos2 import QSOLoaderZDLAs
+from .qso_loader import QSOLoaderMultiDLA, search_index_from_another
 from .dla_data import dla_data
 
 # change fontsize
@@ -44,6 +46,29 @@ def generate_qsos(base_directory="", release="dr12q",
 
     return qsos_zqsos
 
+def generate_multi_dla_qsos(base_directory="../gp_dla_detection_multi_dla", release="dr12q",
+        processed_filename="processed_qsos_multi_lyseries_a03_zwarn_occams_trunc_dr12q.mat",
+        learned_filename="learned_qso_model_lyseries_variance_kim_dr9q_minus_concordance.mat",
+        dla_concordance="data/dla_catalogs/dr9q_concordance/processed/dla_catalog",
+        los_concordance="data/dla_catalogs/dr9q_concordance/processed/los_catalog"):
+    preloaded_file = os.path.join( 
+        base_directory, processed_directory(release), "preloaded_qsos.mat")
+    processed_file  = os.path.join(
+        base_directory, processed_directory(release), processed_filename )
+    catalogue_file = os.path.join(
+        base_directory, processed_directory(release), "catalog.mat")
+    learned_file   = os.path.join(
+        base_directory, processed_directory(release), learned_filename)
+    snrs_file      = os.path.join(
+        base_directory, processed_directory(release), "snrs_qsos_multi_dr12q_zwarn.mat")
+
+    qsos_multidla = QSOLoaderMultiDLA(
+        preloaded_file, catalogue_file, learned_file, processed_file,
+        dla_concordance, los_concordance, snrs_file,
+        occams_razor=1)
+
+    return qsos_multidla
+
 def do_ROC(qsos, occams_razor=1):
     '''
     Plot Two ROC curves to demonstrate the difference
@@ -64,6 +89,104 @@ def do_ROC(qsos, occams_razor=1):
     plt.legend()
     save_figure("ROC_z")
     plt.clf()
+
+def gen_multidla_catalog(qsos_multidla: QSOLoaderMultiDLA, base_thing_ids: np.ndarray,
+        p_thresh: float = 0.9, lnhi_min: float = 20., release: str = "dr12q"):
+    '''
+    Generate a dla_catalog using Ho et al. 2020 with load_dla_concordance's
+    namedtuple convention.
+
+    thing_ids : the thing_ids you would like to select from to compare
+    '''
+    thing_ids_los = qsos_multidla.thing_ids.astype(np.int)
+
+    # remove -1
+    ind = thing_ids_los != -1
+
+    # select the dlas based on p_thresh
+    p_dlas = qsos_multidla.p_dlas
+    dla_ind = (p_dlas > p_thresh) & ind
+
+    thing_ids = thing_ids_los[dla_ind]
+    z_dlas    = qsos_multidla.map_z_dlas[dla_ind, 0, 0]
+    log_nhis  = qsos_multidla.map_log_nhis[dla_ind, 0, 0]
+
+    thing_ids_los = thing_ids_los[ind]
+
+    # apply the lower cut for logNHI
+    inds = log_nhis >= lnhi_min
+
+    thing_ids = thing_ids[inds]
+    z_dlas    = z_dlas[inds]
+    log_nhis  = log_nhis[inds]
+
+    assert all(z_dlas < 7) # make sure getting the correct column
+
+    # assumption here is we only use the first DLA in multiDLA catalogue
+    real_index     = np.where( np.in1d(base_thing_ids, thing_ids) )[0]
+    real_index_los = np.where( np.in1d(base_thing_ids, thing_ids_los) )[0]
+
+    # assert real_index.shape[0] == thing_ids.shape[0]
+    print(
+        "[Warning] {} DLAs lost and {} QSOs lost after np.in1d (searching matched thing_ids in the test data).".format(
+            thing_ids.shape[0] - real_index.shape[0], 
+            thing_ids_los.shape[0] - real_index_los.shape[0]))
+
+    # re-select (z_dla, log_nhi) values from the intersection with Ho 2020
+    # since not all of the sightlines in Ho et al are in zestimation
+    # I did not do the thing_ids re-indexing before due to they are not used again
+    # in the later part of the code, but I should fix that.
+    # TODO: add the re-indexing of thing_ids to QSOLoader in the master branch
+    inds = np.in1d( thing_ids, base_thing_ids )
+    z_dlas    = z_dlas[inds]
+    log_nhis  = log_nhis[inds]
+    thing_ids = thing_ids[inds]
+
+    inds = np.in1d( thing_ids_los, base_thing_ids )
+    thing_ids_los = thing_ids_los[inds]
+
+    assert z_dlas.shape[0] == real_index.shape[0]
+
+    # make sure get the thing_ids right
+    assert np.all(base_thing_ids[real_index_los] == thing_ids_los)
+
+    # store data in named tuple under self
+    dla_catalog = namedtuple(
+        'dla_catalog_concordance', 
+        ['real_index', 'real_index_los', 
+        'thing_ids', 'thing_ids_los', 
+        'z_dlas', 'log_nhis', 'release'])
+    return dla_catalog(
+        real_index=real_index, real_index_los=real_index_los, 
+        thing_ids=thing_ids, thing_ids_los=thing_ids_los, 
+        z_dlas=z_dlas, log_nhis=log_nhis, release=release)
+
+
+def do_ROC_Ho(qsos, qsos_multidla, occams_razor=1, p_thresh=0.9, lnhi_min=20.,
+        release="dr12q"):
+    '''
+    Plot ROC curve comparing to Ho et al. 2020
+
+    Parameters:
+    ----
+    occams_razor : N > 0, only for multi-DLA
+    '''
+    dla_catalog = gen_multidla_catalog(qsos_multidla, 
+        base_thing_ids=qsos.thing_ids, p_thresh=p_thresh, lnhi_min=lnhi_min, release=release)
+
+    TPR, FPR   = qsos.make_ROC(dla_catalog, occams_razor=occams_razor)
+    
+    from scipy.integrate import cumtrapz
+
+    AUC  = - cumtrapz(TPR, x=FPR)[-1]
+
+    plt.plot(FPR,  TPR,  color="C1", label="current;  AUC: {:.3g}".format(AUC))
+    plt.xlabel("False positive rate (FPR)")
+    plt.ylabel("True positive rate (TPR)")
+    plt.legend()
+    save_figure("ROC_multi_dla_z_p_thresh{}".format("_".join( str(p_thresh).split(".") )))
+    plt.clf()
+
 
 def do_MAP_hist2d(qsos):
     '''
