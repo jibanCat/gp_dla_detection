@@ -2400,7 +2400,8 @@ class QSOLoaderMultiDLA(QSOLoader):
         return Delta_z_dlas, Delta_log_nhis, z_dlas_parks
 
     @staticmethod
-    def prediction_json2dict(filename_parks="predictions_DR12.json", object_name='dlas'):
+    def prediction_json2dict(filename_parks="predictions_DR12.json", object_name='dlas',
+            include_subdlas=False):
         '''
         extract dlas or subdlas or lyb 
         and convert to a dataframe
@@ -2419,6 +2420,9 @@ class QSOLoaderMultiDLA(QSOLoader):
             parks_json = json.load(f)
 
         num_dlas = "num_{}".format(object_name)
+
+        sub_dlas_count = []
+        sub_dla_logNHI = 20
 
         # extract DLA information (exclude subDLA, lyb)
         ras       = []
@@ -2452,7 +2456,32 @@ class QSOLoaderMultiDLA(QSOLoader):
                     dla_confidences.append(dla_table['dla_confidence'])
                     z_dlas.append(dla_table['z_dla'])
                     log_nhis.append(dla_table['column_density'])
-            
+                
+                # if we would like to include 20 < logNHI < 20.3
+                if (object_name != "subdlas") and table['num_subdlas'] > 0:
+                    for i in range(table['num_subdlas']):
+                        dla_table = table['subdlas'][i]
+
+                        # if we only want to extract Parks' dla inbetween 20 and
+                        # 20.3
+                        if dla_table['column_density'] < sub_dla_logNHI:
+                            continue
+                        
+                        sub_dlas_count.append(dla_table['column_density'])
+ 
+                        # append the basic qso info
+                        ras.append(table['ra'])
+                        decs.append(table['dec'])
+                        plates.append(plate)       
+                        mjds.append(mjd)           
+                        fiber_ids.append(fiber_id) 
+                        z_qsos.append(table['z_qso'])
+                        
+                        # append the object (dla or lyb or subdla) info
+                        dla_confidences.append(dla_table['dla_confidence'])
+                        z_dlas.append(dla_table['z_dla'])
+                        log_nhis.append(dla_table['column_density'])
+
             # no dla
             elif table[num_dlas] == 0:
                 # append basic info
@@ -2471,7 +2500,10 @@ class QSOLoaderMultiDLA(QSOLoader):
             else:
                 print("[Warning] exception case")
                 print(table)
-                
+        
+        assert np.all(np.array(sub_dlas_count) >= sub_dla_logNHI)
+        print("Load subDLAs {}".format(len(sub_dlas_count)))
+
         dict_parks = {
                 'ras'    :          np.array(ras),
                 'decs'   :          np.array(decs),
