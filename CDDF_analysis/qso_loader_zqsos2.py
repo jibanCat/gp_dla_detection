@@ -340,7 +340,7 @@ class QSOLoaderZDLAs(QSOLoader):
         plt.legend()
 
     def plot_this_mu(self, nspec, suppressed=True, num_voigt_lines=3, num_forest_lines=6, 
-            label="", new_fig=True, color="red", z_sample=None):
+            label="", new_fig=True, color="red", z_sample=None, plot_error=False):
         '''
         Plot the spectrum with the dla model
 
@@ -352,6 +352,7 @@ class QSOLoaderZDLAs(QSOLoader):
         number_forest_lines (int) : how many members of Lymans series considered in the froest
 
         z_sample (float) : predicted z_QSO; if None, assumed using z_map
+        plot_error (bool) : whether or not to plot the variance of the kernel
 
         Returns:
         ----
@@ -444,23 +445,20 @@ class QSOLoaderZDLAs(QSOLoader):
         # plt.figure(figsize=(16, 5))
         if new_fig:
             make_fig()
-            plt.plot(this_rest_wavelengths, this_flux, label="observed flux; spec-{}-{}-{}".format(plate, mjd, fiber_id), color="C0")
+            plt.plot(this_rest_wavelengths, this_flux, label="observed; spec-{}-{}-{}".format(plate, mjd, fiber_id), color="C0")
 
-        if nth >= 0:
-            plt.plot(rest_wavelengths, this_mu, 
-                label=label + r"$\mathcal{M}$"+r" DLA({n})".format(n=nth+1) + ": {:.3g}; ".format(
-                    self.p_dlas[nspec]) + 
-                    "lognhi = ({})".format( ",".join("{:.3g}".format(n) for n in map_log_nhis) ), 
-                color=color)
-        else:
-            plt.plot(rest_wavelengths, this_mu, 
-                label=label + r"$\mathcal{M}$"+r" DLA({n})".format(n=0) + ": {:.3g}".format(self.p_no_dlas[nspec]), 
-                color=color)
+        # remove the model(n) for the redshift paper
+        plt.plot(rest_wavelengths, this_mu, 
+            label=label + "fit model", 
+            color=color)
 
-        plt.fill_between(rest_wavelengths[ind],
-            this_mu[ind] - 2*this_error, this_mu[ind] + 2*this_error, alpha=0.8, color="orange")
+        # wether you want the variance in the plot.
+        # we decided not to plot the variance in the paper.
+        if plot_error:
+            plt.fill_between(rest_wavelengths[ind],
+                this_mu[ind] - 2*this_error, this_mu[ind] + 2*this_error, alpha=0.8, color="orange")
 
-        plt.xlabel(r"Rest Wavelengths $\lambda_{\mathrm{rest}}$ $\AA$")
+        plt.xlabel(r"Rest Wavelengths")
         plt.ylabel(r"Normalized Flux")
         plt.legend()
         

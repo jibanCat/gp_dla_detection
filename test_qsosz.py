@@ -15,45 +15,51 @@ delta_z = 0.5
 # generate QSOLoader insrance
 qsos = make_zqso_plots.generate_qsos()
 
-# z_map versus z_true
-index = qsos.plot_z_map(delta_z=delta_z)
-plt.show()
-
-print("Misfits : ", qsos.thing_ids[index].shape[0])
-print("Thing_IDs = ", qsos.thing_ids[index])
-print("MSE z_true-z_map : {:.3g}".format( np.mean( (qsos.z_map - qsos.z_true)**2 )  ))
-print("Misfit SNRs (catalog values) : ", qsos.snrs_cat[index])
-
-# 2D histogram
-fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-(h, xedges, yedges, im) = ax.hist2d(qsos.z_map, qsos.z_true,
-    bins = int(np.sqrt(qsos.z_map.shape[0]) / 2), cmap='gray_r', norm=matplotlib.colors.LogNorm())
-ax.set_xlabel(r"$z_{{QSO,MAP}}$")
-ax.set_ylabel(r"$z_{{QSO,catalog}}$")
-fig.colorbar(im, ax=ax)
-make_zqso_plots.save_figure("hist2d_z_map_vs_z_true_pure-z")
-plt.clf()
-plt.close()
+# # z_map versus z_true
+# index = qsos.plot_z_map(delta_z=delta_z)
 # plt.show()
+
+# print("Misfits : ", qsos.thing_ids[index].shape[0])
+# print("Thing_IDs = ", qsos.thing_ids[index])
+# print("MSE z_true-z_map : {:.3g}".format( np.mean( (qsos.z_map - qsos.z_true)**2 )  ))
+# print("Misfit SNRs (catalog values) : ", qsos.snrs_cat[index])
+
+# # 2D histogram
+# fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+# (h, xedges, yedges, im) = ax.hist2d(qsos.z_map, qsos.z_true,
+#     bins = int(np.sqrt(qsos.z_map.shape[0]) / 6), cmap='gray_r', norm=matplotlib.colors.LogNorm())
+# ax.set_xlabel(r"$z_{{QSO,MAP}}$")
+# ax.set_ylabel(r"$z_{{QSO,catalog}}$")
+# fig.colorbar(im, ax=ax)
+# make_zqso_plots.save_figure("hist2d_z_map_vs_z_true_pure-z_zqsos2_sbird_log_6")
+# plt.clf()
+# plt.close()
+# # plt.show()
 
 # # this plots P(M|D) versus z_samples
 # qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
 # plt.show()
 
-# Plot the spectra with this_mu, using MAP z estimate
-nspec = 15
-qsos.plot_this_mu(nspec=nspec, suppressed=True, 
-    num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
-plt.ylim(-1, 5)
-plt.show()
+# # Plot the spectra with this_mu, using MAP z estimate
+# nspec = 15
+# qsos.plot_this_mu(nspec=nspec, suppressed=True, 
+#     num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
+# plt.ylim(-1, 5)
+# plt.show()
 
-# Plot the spectra with this_mu, using True zQSO
-qsos.plot_this_mu(nspec=nspec, suppressed=True, 
-    num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec])
-plt.ylim(-1, 5)
-plt.show()
+# # Plot the spectra with this_mu, using True zQSO
+# qsos.plot_this_mu(nspec=nspec, suppressed=True, 
+#     num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec])
+# plt.ylim(-1, 5)
+# plt.show()
 
-for nspec in np.where(index)[0]:
+# lyman break examples
+from CDDF_analysis.qso_loader import search_index_from_another
+lyman_break_thing_ids = np.array([262480129, 213703605, 180732921])
+all_nspecs_lyman_breaks = search_index_from_another(lyman_break_thing_ids, qsos.thing_ids)
+
+for nspec in all_nspecs_lyman_breaks:
+# for nspec in np.where(index)[0]:
     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
     # # saving plots: z_samples versus poseteriors
@@ -70,7 +76,7 @@ for nspec in np.where(index)[0]:
         num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec])
     plt.ylim(-1, 5)        
     make_zqso_plots.save_figure(
-        "data/zqsos2_sbird_plots/{}_this_mu_delta_z_{}_ZMAP".format(
+        "{}_this_mu_delta_z_{}_ZMAP_zqsos2_sbird".format(
             qsos.thing_ids[nspec], delta_z))
     plt.close()
     plt.clf()
@@ -81,7 +87,7 @@ for nspec in np.where(index)[0]:
         num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec])
     plt.ylim(-1, 5)    
     make_zqso_plots.save_figure(
-        "data/zqsos2_sbird_plots/{}_this_mu_delta_z_{}_ZTrue".format(
+        "{}_this_mu_delta_z_{}_ZTrue_zqsos2_sbird".format(
             qsos.thing_ids[nspec], delta_z))
     plt.close()
     plt.clf()
