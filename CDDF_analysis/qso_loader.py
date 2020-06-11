@@ -1445,7 +1445,7 @@ class QSOLoaderZ(QSOLoader):
 
         plt.scatter(self.offset_samples_qso,
             this_sample_log_posteriors,
-            color="red", label="P(z_qso | D)", alpha=0.5,
+            color="red", alpha=0.5,  # not need for label, duplicate to y-axis
             rasterized=True)
 
         # plot verticle lines corresponding to metal lines miss fitted lya
@@ -1460,23 +1460,28 @@ class QSOLoaderZ(QSOLoader):
         ymin = this_sample_log_posteriors[non_inf_ind].min()
         ymax = this_sample_log_posteriors[non_inf_ind].max()
 
-        plt.vlines([self.z_true[nspec], z_ovi, z_lyb, z_oi, z_siiv, z_civ],
+        # wavelengths lower than Lya usually hard to see
+        # plt.vlines([self.z_true[nspec], z_ovi, z_lyb, z_oi, z_siiv, z_civ],
+            # ymin, ymax, color="red", ls='--')
+        plt.vlines([self.z_true[nspec], z_siiv, z_civ],
             ymin, ymax, color="red", ls='--')
 
-        plt.text(z_ovi,  ymax, r"Z_OVI",  rotation=90, verticalalignment="bottom")
-        plt.text(z_lyb,  ymax, r"Z_OI",   rotation=90, verticalalignment="bottom")
-        plt.text(z_oi,   ymax, r"Z_OI",   rotation=90, verticalalignment="bottom")
-        plt.text(z_siiv, ymax, r"Z_SIIV", rotation=90, verticalalignment="bottom")
-        plt.text(z_civ,  ymax, r"Z_CIV",  rotation=90, verticalalignment="bottom")
+        # wavelengths lower than Lya usually hard to see
+        # plt.text(z_ovi,  ymax, r"Z_OVI",  rotation=90, verticalalignment="bottom")
+        # plt.text(z_lyb,  ymax, r"Z_OI",   rotation=90, verticalalignment="bottom")
+        # plt.text(z_oi,   ymax, r"Z_OI",   rotation=90, verticalalignment="bottom")
 
-        plt.text(self.z_true[nspec],  ymax, r"Z_QSO",  rotation=90, verticalalignment="bottom")
+        plt.text(z_siiv, ymin, r"$z_{SIIV}$", rotation=90, verticalalignment="bottom", fontsize=16)
+        plt.text(z_civ,  ymin, r"$z_{CIV}$",  rotation=90, verticalalignment="bottom", fontsize=16)
 
-        plt.xlabel("z samples")
-        plt.ylabel("posteriors")
+        plt.text(self.z_true[nspec],  ymin, r"$z_{QSO}$",  rotation=90, verticalalignment="bottom", fontsize=16)
+
+        plt.xlabel(r"$z_{QSO}$ samples")
+        plt.ylabel("log posteriors")
         plt.legend()
 
     def plot_this_mu(self, nspec, suppressed=True, num_voigt_lines=3, num_forest_lines=6, 
-            label="", new_fig=True, color="red", z_sample=None):
+            label="", new_fig=True, color="red", z_sample=None, plot_error=False):
         '''
         Plot the spectrum with the dla model
 
@@ -1556,17 +1561,19 @@ class QSOLoaderZ(QSOLoader):
         # plt.figure(figsize=(16, 5))
         if new_fig:
             make_fig()
-            plt.plot(this_rest_wavelengths, this_flux, label="spec-{}-{}-{}".format(plate, mjd, fiber_id), color="C0")
+            plt.plot(this_rest_wavelengths, this_flux, label="observed; spec-{}-{}-{}".format(plate, mjd, fiber_id), color="C0")
 
         plt.plot(rest_wavelengths, this_mu, 
-            label=label + r"$\mu$ (mean prior)", 
+            label=label + r"fit model", 
             color=color)
+        
+        # we decided to not plot the variance in the paper
+        if plot_error:
+            plt.fill_between(rest_wavelengths[ind],
+                this_mu[ind] - 2*this_error, this_mu[ind] + 2*this_error, alpha=0.8, color="orange")
 
-        plt.fill_between(rest_wavelengths[ind],
-            this_mu[ind] - 2*this_error, this_mu[ind] + 2*this_error, alpha=0.8, color="orange")
-
-        plt.xlabel(r"Restframe wavelengths $\lambda_{\mathrm{rest}}$ $\AA$")
-        plt.ylabel(r"Normalized flux")
+        plt.xlabel(r"Restframe Wavelengths")
+        plt.ylabel(r"Normalized Flux")
         plt.legend()
         
         return rest_wavelengths, this_mu
