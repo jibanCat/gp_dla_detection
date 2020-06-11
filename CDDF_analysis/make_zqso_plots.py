@@ -28,7 +28,7 @@ def generate_qsos(base_directory="", release="dr12q",
     preloaded_file = os.path.join( 
         base_directory, processed_directory(release), "preloaded_zqso_only_qsos.mat")
     processed_file  = os.path.join(
-        base_directory, processed_directory(release), "processed_zqso_only_qsos_dr14q-100_1-10001_1176-1256_outdata_normout_oc0.mat" )
+        base_directory, processed_directory(release), "processed_zqso_only_qsos_dr12q-100_uniformprior.mat" )
     catalogue_file = os.path.join(
         base_directory, processed_directory(release), "zqso_only_catalog.mat")
     learned_file   = os.path.join(
@@ -84,7 +84,7 @@ def do_procedure_plots(qsos, model_min_lambda=910, model_max_lambda=3000):
     max_lambda = model_max_lambda
     scale = np.shape(qsos.GP.C)[0] / ( max_lambda - min_lambda )
 
-    fix, ax = plt.subplots(figsize=(10,10))
+    fig, ax = plt.subplots(figsize=(8,8))
     im = ax.imshow(qsos.GP.C, origin="lower", cmap="gray_r")
     ax.set_xticks(
         [

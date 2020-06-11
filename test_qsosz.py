@@ -33,11 +33,11 @@ print("Misfit SNRs (catalog values) : ", qsos.snrs_cat[index])
 # 2D histogram
 fig, ax = plt.subplots(1, 1, figsize=(8, 8))
 (h, xedges, yedges, im) = ax.hist2d(qsos.z_map, qsos.z_true,
-    bins = int(np.sqrt(qsos.z_map.shape[0])/2), cmap='gray_r', norm=matplotlib.colors.LogNorm())
+    bins = int(np.sqrt(qsos.z_map.shape[0])/6), cmap='gray_r', norm=matplotlib.colors.LogNorm())
 ax.set_xlabel(r"$z_{{QSO,MAP}}$")
 ax.set_ylabel(r"$z_{{QSO,catalog}}$")
 fig.colorbar(im, ax=ax)
-make_zqso_plots.save_figure("hist2d_z_map_vs_z_true_pure-z_log")
+make_zqso_plots.save_figure("hist2d_z_map_vs_z_true_pure-z-log_uniform_6")
 plt.clf()
 plt.close()
 # plt.show()
