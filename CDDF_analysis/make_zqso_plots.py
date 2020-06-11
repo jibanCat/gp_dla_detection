@@ -85,7 +85,7 @@ def do_procedure_plots(qsos, model_min_lambda=910, model_max_lambda=3000):
     scale = np.shape(qsos.GP.C)[0] / ( max_lambda - min_lambda )
 
     fix, ax = plt.subplots(figsize=(10,10))
-    ax.imshow(qsos.GP.C, origin="lower", cmap="gray_r")
+    im = ax.imshow(qsos.GP.C, origin="lower", cmap="gray_r")
     ax.set_xticks(
         [
          (lyman_limit    - min_lambda) * scale,

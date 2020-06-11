@@ -10,6 +10,9 @@ from CDDF_analysis.set_parameters import *
 
 # matplotlib.use('TkAgg')
 
+# change fontsize
+matplotlib.rcParams.update({'font.size' : 14})
+
 delta_z = 0.5
 
 # generate QSOLoader insrance
@@ -30,11 +33,11 @@ print("Misfit SNRs (catalog values) : ", qsos.snrs_cat[index])
 # 2D histogram
 fig, ax = plt.subplots(1, 1, figsize=(8, 8))
 (h, xedges, yedges, im) = ax.hist2d(qsos.z_map, qsos.z_true,
-    bins = int(np.sqrt(qsos.z_map.shape[0])), cmap='viridis')
+    bins = int(np.sqrt(qsos.z_map.shape[0])/2), cmap='gray_r', norm=matplotlib.colors.LogNorm())
 ax.set_xlabel(r"$z_{{QSO,MAP}}$")
 ax.set_ylabel(r"$z_{{QSO,catalog}}$")
 fig.colorbar(im, ax=ax)
-make_zqso_plots.save_figure("hist2d_z_map_vs_z_true_pure-z")
+make_zqso_plots.save_figure("hist2d_z_map_vs_z_true_pure-z_log")
 plt.clf()
 plt.close()
 # plt.show()
@@ -62,42 +65,42 @@ plt.close()
 # # finding the   0.1 < | z_true - z_map | < 0.5
 # # index = (np.abs(qsos.z_true - qsos.z_map) < 0.075) & (np.abs(qsos.z_true - qsos.z_map) > 0.05)
 
-for nspec in np.where(index)[0]:
-# for nspec in range(100):
-    print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
+# for nspec in np.where(index)[0]:
+# # for nspec in range(100):
+#     print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
 
-    # saving plots: z_samples versus poseteriors
-    qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
-    plt.savefig("{}_posterior_zqso_samples_delta_z_{}.pdf".format(
-            qsos.thing_ids[nspec], delta_z),
-            dpi=150, format='pdf')
-    plt.close()
-    plt.clf()
-    # plt.show()
+#     # saving plots: z_samples versus poseteriors
+#     qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
+#     plt.savefig("{}_posterior_zqso_samples_delta_z_{}.pdf".format(
+#             qsos.thing_ids[nspec], delta_z),
+#             dpi=150, format='pdf')
+#     plt.close()
+#     plt.clf()
+#     # plt.show()
 
-    # saving plots: MAP estimate model
-    qsos.plot_this_mu(nspec=nspec, 
-        num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec],
-        suppressed=qsos.suppressed)
-    plt.ylim(-1, 5)        
-    make_zqso_plots.save_figure(
-        "{}_this_mu_delta_z_{}_ZMAP".format(
-            qsos.thing_ids[nspec], delta_z))
-    plt.close()
-    plt.clf()
-    # plt.show()
+#     # saving plots: MAP estimate model
+#     qsos.plot_this_mu(nspec=nspec, 
+#         num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_map[nspec],
+#         suppressed=qsos.suppressed)
+#     plt.ylim(-1, 5)        
+#     make_zqso_plots.save_figure(
+#         "{}_this_mu_delta_z_{}_ZMAP".format(
+#             qsos.thing_ids[nspec], delta_z))
+#     plt.close()
+#     plt.clf()
+#     # plt.show()
 
-    # saving plots: True QSO rest-frame
-    qsos.plot_this_mu(nspec=nspec, 
-        num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec],
-        suppressed=qsos.suppressed)
-    plt.ylim(-1, 5)
-    make_zqso_plots.save_figure(
-        "{}_this_mu_delta_z_{}_ZTrue".format(
-            qsos.thing_ids[nspec], delta_z))
-    plt.close()
-    plt.clf()
-    # plt.show()
+#     # saving plots: True QSO rest-frame
+#     qsos.plot_this_mu(nspec=nspec, 
+#         num_voigt_lines=3, num_forest_lines=6, z_sample=qsos.z_qsos[nspec],
+#         suppressed=qsos.suppressed)
+#     plt.ylim(-1, 5)
+#     make_zqso_plots.save_figure(
+#         "{}_this_mu_delta_z_{}_ZTrue".format(
+#             qsos.thing_ids[nspec], delta_z))
+#     plt.close()
+#     plt.clf()
+#     # plt.show()
 
 # # inspect the this_wavelength due to the normalisation is weird
 # this_wavelengths    = qsos.find_this_wavelengths(nspec)
