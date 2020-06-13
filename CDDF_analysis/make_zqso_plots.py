@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from astropy.io import fits
 
 from .set_parameters import *
-from .qso_loader import QSOLoaderZ
+from .qso_loader import QSOLoaderZ, search_index_from_another
 
 # change fontsize
 matplotlib.rcParams.update({'font.size' : 14})
@@ -118,6 +118,50 @@ def do_procedure_plots(qsos, model_min_lambda=910, model_max_lambda=3000):
     plt.tight_layout()
     save_figure("covariance_matrix")
     plt.clf()
+
+def do_plot_thing_ids(qsos, selected_thing_ids=[544031279, 27885089]):
+    '''
+    Some selected thing_ids with:
+    1. their log posteriors
+    2. their z_map model
+    3. their z_true model
+
+    The default thing_ids selected from the Leah et al. (2020) paper.
+    '''
+    all_nspecs = search_index_from_another(selected_thing_ids, qsos.thing_ids)
+
+    for nspec in all_nspecs:
+        print("Plotting {}/{} ...".format(nspec, len(qsos.z_qsos)))
+
+        # saving plots: z_samples versus poseteriors
+        qsos.plot_z_sample_posteriors(nspec, dla_samples=True)
+        plt.savefig("{}_posterior_zqso_samples.pdf".format(
+                qsos.thing_ids[nspec]),
+                dpi=150, format='pdf')
+        plt.close()
+        plt.clf()
+
+        # saving plots: MAP estimate model
+        qsos.plot_this_mu(nspec=nspec, 
+            num_forest_lines=0, z_sample=qsos.z_map[nspec],
+            suppressed=False)
+        plt.ylim(-1, 5)        
+        save_figure(
+            "{}_this_mu_ZMAP".format(
+                qsos.thing_ids[nspec]))
+        plt.close()
+        plt.clf()
+
+        # saving plots: True QSO rest-frame
+        qsos.plot_this_mu(nspec=nspec, 
+            num_forest_lines=0, z_sample=qsos.z_qsos[nspec],
+            suppressed=False)
+        plt.ylim(-1, 5)
+        save_figure(
+            "{}_this_mu_ZTrue".format(
+                qsos.thing_ids[nspec]))
+        plt.close()
+        plt.clf()
 
 def do_plot_example(qsos, nspec=18):
     '''
