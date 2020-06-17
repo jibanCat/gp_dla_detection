@@ -113,6 +113,7 @@ log_omega_interpolator = ...
 % initialize results
 min_z_dlas                 = nan(num_quasars, 1);
 max_z_dlas                 = nan(num_quasars, 1);
+min_z_llss                 = nan(num_quasars, 1);
 log_priors_no_dla          = nan(num_quasars, 1);
 log_priors_dla             = nan(num_quasars, max_dlas);
 log_likelihoods_no_dla     = nan(num_quasars, 1);
@@ -305,12 +306,20 @@ for quasar_ind = 1:num_quasars
   fprintf_debug(' ... log p(  D  | z_QSO, no DLA ) : %0.2f\n', ...
                 log_likelihoods_no_dla(quasar_ind));
 
+  % separate lls and dla sampling to ensure we can get a full range of
+  % regularisation from sub-DLAs; the maximum z_lls is assumed to be max_z_dla
   min_z_dlas(quasar_ind) = min_z_dla(this_wavelengths, z_qso);
   max_z_dlas(quasar_ind) = max_z_dla(this_wavelengths, z_qso);
+
+  min_z_llss(quasar_ind) = min_z_lls(this_wavelengths, z_qso);
 
   sample_z_dlas = ...
       min_z_dlas(quasar_ind) +  ...
       (max_z_dlas(quasar_ind) - min_z_dlas(quasar_ind)) * offset_samples;
+
+  sample_z_llss = ...
+      min_z_llss(quasar_ind) +  ...
+      (max_z_dlas(quasar_ind) - min_z_llss(quasar_ind)) * offset_samples;
 
   this_base_sample_inds = zeros(max_dlas - 1, num_dla_samples, 'uint32');
 
@@ -363,7 +372,7 @@ for quasar_ind = 1:num_quasars
       % compute lls model
       if (num_dlas == 1)
         % absorption with lls column density
-        absorption = voigt(padded_wavelengths, sample_z_dlas(i), ...
+        absorption = voigt(padded_wavelengths, sample_z_llss(i), ...
           lls_nhi_samples(i), num_lines);
 
         absorption = absorption(mask_ind);
@@ -508,14 +517,14 @@ variables_to_save = {'training_release', 'training_set_name', ...
                      'all_exceptions', 'sample_log_likelihoods_lls'};
 
 if (exist('test_ind', 'var'))
-  filename = sprintf('%s/processed_qsos_multi_lls_occam_lyseries_variance_kim_lyb_a03_%s_%d-%d', ...
+  filename = sprintf('%s/processed_qsos_multi_lls_occam_lyseries_lyb_a03_lls_lyinf_%s_%d-%d', ...
                      processed_directory(release), ...
                      test_set_name, ...
                      qsos_num_offset, qsos_num_offset + num_quasars);
 
   variables_to_save{end + 1} = 'test_ind';
 else
-  filename = sprintf('%s/processed_qsos_multi_lls_occam_lyseries_variance_kim_lyb_a03_%d-%d', ...
+  filename = sprintf('%s/processed_qsos_multi_lls_occam_lyseries_lyb_a03_lls_lyinf_%d-%d', ...
                      processed_directory(release), ...
                      qsos_num_offset, qsos_num_offset + num_quasars);
 end
