@@ -37,6 +37,9 @@ lya_1pzs             = nan(num_quasars, num_rest_pixels);
 all_lyman_1pzs       = nan(num_forest_lines, num_quasars, num_rest_pixels);
 rest_fluxes          = nan(num_quasars, num_rest_pixels);
 rest_noise_variances = nan(num_quasars, num_rest_pixels);
+% save these two variables to minimize the reddening
+all_lya_absorptions  = nan(num_quasars, num_rest_pixels);
+all_reddens          = nan(num_quasars, 1);
 
 % the preload_qsos should fliter out empty spectra;
 % this line is to prevent there is any empty spectra
@@ -170,6 +173,7 @@ for i = 1:num_quasars
   % Apr 8: using zeros instead so not nansum here anymore
   % beyond lya, absorption fcn shoud be unity
   lya_absorption = exp(- sum(total_optical_depth, 1) );
+  all_lya_absorptions(i, :) = lya_absorption;
 
   % We have to reverse the effect of Lyα for both mean-flux and observational noise
   rest_fluxes_div_exp1pz(i, :)      = rest_fluxes(i, :) ./ lya_absorption;
@@ -184,6 +188,7 @@ ind = sum(isnan(rest_fluxes_div_exp1pz),2) < num_rest_pixels-min_num_pixels;
 fprintf("Filtering %g quasars\n", length(rest_fluxes_div_exp1pz) - nnz(ind));
 
 z_qsos                      = z_qsos(ind);
+rest_fluxes                 = rest_fluxes(ind, :);
 rest_fluxes_div_exp1pz      = rest_fluxes_div_exp1pz(ind, :);
 rest_noise_variances_exp1pz = rest_noise_variances_exp1pz(ind, :);
 lya_1pzs                    = lya_1pzs(ind, :);
@@ -196,7 +201,26 @@ max(find(nancolfrac > 0.9))
 
 % find empirical mean vector and center data
 mu = nanmean(rest_fluxes_div_exp1pz);
-centered_rest_fluxes = bsxfun(@minus, rest_fluxes_div_exp1pz, mu);
+% centered_rest_fluxes = bsxfun(@minus, rest_fluxes_div_exp1pz, mu);
+centered_rest_fluxes = nan(num_quasars, num_rest_pixels);
+
+% find the reddening factor for each qso
+for i = 1:num_quasars
+  a0 = 0.;
+  objective_fun = @(a) objective_reddening(rest_wavelengths, ...
+    rest_fluxes(i, :), all_lya_absorptions(i, :), mu, ...
+    a, normalization_min_lambda, normalization_max_lambda);
+  redden = fminsearch(objective_fun, a0);
+
+  all_reddens(i, 1) = redden;
+
+  % get the ( y - mu ) with consideration of reddening
+  this_mu = redden_mu(mu, rest_wavelengths, redden, ...
+    normalization_min_lambda, normalization_max_lambda);
+  centered_rest_fluxes(i, :) = ( rest_fluxes_div_exp1pz(i, :) - this_mu );
+end
+
+
 clear('rest_fluxes', 'rest_fluxes_div_exp1pz');
 
 % small fix to the data fit into the pca:
