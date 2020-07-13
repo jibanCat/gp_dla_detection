@@ -192,6 +192,10 @@ rest_fluxes                 = rest_fluxes(ind, :);
 rest_fluxes_div_exp1pz      = rest_fluxes_div_exp1pz(ind, :);
 rest_noise_variances_exp1pz = rest_noise_variances_exp1pz(ind, :);
 lya_1pzs                    = lya_1pzs(ind, :);
+all_lya_absorptions         = all_lya_absorptions(ind, :);
+
+% update num_quasars in consideration
+num_quasars = numel(z_qsos);
 
 % Check for columns which contain only NaN on either end.
 nancolfrac = sum(isnan(rest_fluxes_div_exp1pz), 1) / nnz(ind);

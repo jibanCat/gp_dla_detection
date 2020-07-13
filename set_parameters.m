@@ -44,12 +44,14 @@ initial_c_0   =    0.1;                       % initial guess for c₀
 initial_tau_0 = 0.0023;                       % initial guess for τ₀
 initial_beta  =   3.65;                       % initial guess for β
 minFunc_options =               ...           % optimization options for model fitting
-    struct('MaxIter',     2000, ...
+    struct('MaxIter',     1000, ...
            'MaxFunEvals', 4000);
 
 % instrumental broadening parameters
 width = 3;                                    % width of Gaussian broadening (# pixels)
 pixel_spacing = 1e-4;                         % wavelength spacing of pixels in dex
+
+num_continuum_samples = 1000;
 
 % Lyman-series array: for modelling the forests of Lyman series
 num_forest_lines = 6;

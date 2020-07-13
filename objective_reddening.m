@@ -14,7 +14,7 @@ function loss = objective_reddening(rest_wavelengths, this_rest_fluxes, ...
     this_rest_fluxes = this_rest_fluxes / this_median;
 
     % apply reddening to the mu and re-normalize
-    mu = mu .* rest_wavelengths^a;
+    mu = mu .* rest_wavelengths.^a;
 
     this_median = nanmedian(mu(ind));
     mu = mu / this_median;
@@ -23,5 +23,5 @@ function loss = objective_reddening(rest_wavelengths, this_rest_fluxes, ...
     mu = mu .* this_lya_absorptions;
 
     % just chi^2 since no covariance information
-    loss = nansum( (this_rest_fluxes - mu)^2 );
+    loss = nansum( (this_rest_fluxes - mu).^2 );
 end

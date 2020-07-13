@@ -3,7 +3,7 @@
 
 function mu = redden_mu(mu, rest_wavelengths, a, ...
         normalization_min_lambda, normalization_max_lambda)
-    mu = mu .* rest_wavelengths^a;
+    mu = mu .* rest_wavelengths.^a;
 
     % select the range to normalize
     ind = (rest_wavelengths >= normalization_min_lambda) & ...
