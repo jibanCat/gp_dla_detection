@@ -23,7 +23,7 @@ loading_max_lambda = 5000;                  % This maximum is set so we include 
 
 % preprocessing parameters
 z_qso_cut      = 2.15;                        % filter out QSOs with z less than this threshold
-z_qso_training_max_cut = 3;                   % for continuum fit model, select a fairly low
+z_qso_training_max_cut = 5;                   % for continuum fit model, select a fairly low
 z_qso_training_min_cut = 2.15;                % redshift region to train.
 min_num_pixels = 400;                         % minimum number of non-masked pixels
 
